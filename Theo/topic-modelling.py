@@ -3,26 +3,14 @@ import pandas as pd
 import numpy as np
 import sklearn
 import pickle
+import re
 
 chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
 
 df=pd.read_csv(chemin+'etudes_dataset_cleaned_prepared.csv',sep=";")
 X_train=df.docs[:25]
 X_test=df.docs[25:]
-# %%
-########################################################################################################
-#############            LSA            ###########################################################################################
-##################################################################################################################
 
-
-from sklearn.decomposition import TruncatedSVD
-import pickle
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix
-#%%
-import re
 theme=list(np.unique(re.sub("[\(\[].*?[\)\]]", "",
     re.sub(","," ",
         re.sub(";"," ",' '.join(np.unique(df.theme.values))))).split(' ')))
@@ -31,6 +19,17 @@ theme.remove('ET'),theme.remove('')
 database={}
 for i in range(len(theme)):
     database[theme[i]]=df[[True if theme[i] in df.theme[z] else False for z in range(len(df))]]
+# %%
+########################################################################################################
+#############            LSA            ###########################################################################################
+##################################################################################################################
+
+
+from sklearn.decomposition import TruncatedSVD
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
 
 # %%
 maxf=100000
@@ -78,12 +77,16 @@ name=pickle.load(open(chemin+'LSA/LSA_theme_name_features.pickle',"rb"))
 vect_theme=pickle.load(open(chemin+'LSA/LSA_theme_vect.pickle',"rb"))
 train=pickle.load(open(chemin+'LSA/LSA_theme_docs.pickle',"rb"))
 train_lsa=pickle.load(open(chemin+'LSA/LSA_theme_docs_svd.pickle',"rb"))
+mots_themes={}
 for t in theme:
+    mots=[]
     for i, comp in enumerate(svdm[t].components_):
         terms_comp = zip(name[t], comp)
         sorted_terms = sorted(terms_comp, key= lambda x:x[1], reverse=True)[:7]
         print("Topic "+str(i)+": ")
-        print([sorted_terms[i][0] for i in range(len(sorted_terms))])
+        mots.append([sorted_terms[i][0] for i in range(len(sorted_terms))])
+        print(mots[i])
+    mots_themes[t]=np.array(mots).flatten()
 
 
 
@@ -213,6 +216,15 @@ for idx,topic in lda_model.print_topics(-1):
     print("\n")
 # %%
 #########################################################################################################################
+#############     LDA    sklearn        ###########################################################################################
+##################################################################################################################
+from sklearn.decomposition import LatentDirichletAllocation
+k=15
+lda = LatentDirichletAllocation(n_components=k)
+lda.fit(train[theme[0]])
+pd.Series(vect_theme[theme[0]].get_feature_names())[lda.components_[0].argsort()[:10]].values
+# %%
+#########################################################################################################################
 #############      Généralisation      LDA    Gensim        ###########################################################################################
 ##################################################################################################################
 
@@ -288,12 +300,6 @@ for idx,topic in LDA_theme[theme[0]].print_topics(-1):
 LDA_theme[theme[0]].show_topic(-1,100)
 # %%
 #########################################################################################################################
-#############      Méthodes à tester       ###########################################################################################
-## 1. Kmeans
-## 2. LDA2vec
-
-# %%
-#########################################################################################################################
 #############      Gensim explication et exemple       ###########################################################################################
 ##################################################################################################################
 
@@ -318,4 +324,40 @@ for sent in sentence_stream:
     tokens_ = bigram_phraser[sent]
 
     print(tokens_)
+# %%
+#########################################################################################################################
+#############     Word2Vec et KMeans      ###########################################################################################
+##################################################################################################################
+import gensim
+sentences = np.array([str(c).split() for c in list(database[theme[0]].docs)])
+fenetre=15
+minimum=1
+d=300
+# W2V=gensim.models.Word2Vec(sentences,size=d,window=fenetre,min_count=minimum)
+W2V=gensim.models.Word2Vec(size=d,window=fenetre,min_count=minimum)
+W2V.build_vocab(sentences)
+W2V.train(sentences,total_examples=W2V.corpus_count,epochs=5)
+# %%
+vocabulaire=[v for v in list(set(W2V.wv.vocab)) if len(v)>2]
+vocab_theme=[v for v in vocabulaire if v[:3]==theme[0].lower()[:3]]
+vocab_theme_wv=np.array([W2V.most_similar(t)[i][0] for t in vocab_theme for i in range(10)]).flatten()
+vocab_theme_wv=[v for v in vocab_theme_wv if len(v)>2]
+vocab_theme_wv #mots les plus similaires des mots qui partagent la racine du thème
+#%%
+vector=pd.concat([pd.DataFrame(W2V[v]).T for v in vocab_theme_wv])
+vector['index']=vocab_theme_wv
+vector.set_index(keys='index',inplace=True)
+# %%
+from sklearn.cluster import KMeans
+kmeansmodel=KMeans(n_clusters=3,n_init=20,max_iter=500)
+kmeans=kmeansmodel.fit(vector)
+# %%
+vector['label']=kmeans.labels_ #La on a donc 15 groupes de mots,
+#qui sont censés donc avoir des points communs (dans l'espace sémantique)
+#les centroïdes nous on s'en moque puisque les variables n'ont pas de sens 
+#elles proviennent du Word2Vec 
+# %%
+#On va croiser cela avec les mots du vocabulaire pour cherché les groupes proches
+groupe_theme=np.array([vector.label[vector.index==v].values[0] for v in vocab_theme_wv if v in vector.index])
+groupe_theme
 # %%
