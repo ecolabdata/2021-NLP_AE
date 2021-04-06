@@ -6,6 +6,9 @@ import pickle
 import re
 
 chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+# df=pickle.load(open(chemin+'base_html.pickle','rb'))
+# df
+#%%
 fichiers=os.listdir(chemin+'EI_txt')
 fichiers=[f for f in fichiers if f[-4:]=='.txt']
 
@@ -30,7 +33,8 @@ base_html.columns=['num_etude','texte']
 # %%
 pickle.dump(base_html,open(chemin+'base_html.pickle','wb'))
 pickle.dump(base_txt,open(chemin+'base_txt.pickle','wb'))
-
+base_html.to_csv(chemin+'base_html.csv')
+base_txt.to_csv(chemin+'base_txt.csv')
 # %%
 chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
 fichiers=os.listdir(chemin+'EI_html')
