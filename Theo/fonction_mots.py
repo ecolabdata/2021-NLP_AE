@@ -8,15 +8,6 @@ import re
 chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
 
 df=pd.read_csv(chemin+'etudes_dataset_cleaned_prepared.csv',sep=";")
-database=base_theme(df)
-features,vect_theme=vect_theme_tfidf(database)
-mots_themes_LSA=LSA_mots(features,vect_theme)
-#%%
-mots_themes_TFIDF=mots_themes_tfidf(features,vect_theme,25)
-#%%
-mots_themes_LDA=LDA_mots(features,vect_theme)
-#%%
-mots_themes_WKMeans=W2VKMEANS_mots(database)
 #%%
 ######## construction des dico de bases par thèmes
 
@@ -56,7 +47,7 @@ def vect_theme_tfidf(database,maxf=100000,nrange=(1,2)):
 
 ########### LSA
 
-def LSA_mots(train,vect_theme,ndim=100,niter=1000):
+def LSA_mots(train,vect_theme,ndim=100,niter=1000,n=5):
     '''
     @train matrice TF-IDF des documents dont on veut les mots
     @vect_theme dico des vect tf-idf 
@@ -71,13 +62,15 @@ def LSA_mots(train,vect_theme,ndim=100,niter=1000):
         svdm[t]=svd.fit(train[t])
         train_lsa[t]=svdm[t].transform(train[t])
         mots=[]
+        coeff=[]
         for i, comp in enumerate(svdm[t].components_):
             terms_comp = zip(vect_theme[t].get_feature_names(), comp)
-            sorted_terms = sorted(terms_comp, key= lambda x:x[1], reverse=True)[:7]
+            sorted_terms = sorted(terms_comp, key= lambda x:x[1], reverse=True)[:n]
             print("Topic "+str(i)+": ")
             mots.append([sorted_terms[i][0] for i in range(len(sorted_terms))])
             print(mots[i])
-        mots_themes[t]=np.array(mots).flatten()
+            coeff.append(sorted(svdm[t].components_[i],reverse=True)[:n])
+        mots_themes[t]=[[i,np.array(mots)[i],np.array(coeff)[i]] for i, _ in enumerate(svdm[t].components_)]
     return mots_themes
 
 
@@ -103,17 +96,18 @@ def get_max_names(train_features,vect,N):
     @train_features matrice TF-IDF des documents
     @vect vect ayant servi à la transformation
     '''
-    matrice=(train_features).toarray()
+    matrice=(train_features).toarray().mean(axis=0)
     maxnamesN=[]
     number_of_docs=len(matrice)
-    for i in range(number_of_docs):
-        maxn=Nmaxelements(matrice[i],N)
-        maxnames=[]
-        for k in range(N):
-            maxnames.append(vect.get_feature_names()[list(matrice[i]).index(maxn[k])])
-        maxnamesN.append(maxnames)
+    maxn=Nmaxelements(matrice,N)
+    maxnames=[]
+    for k in range(N):
+        maxnames.append(
+            vect.get_feature_names()[
+                list(matrice).index(maxn[k])])
+    maxnamesN.append(maxnames)
     print(number_of_docs,' listes des', N,' plus grands éléments.')
-    return maxnamesN
+    return maxnamesN,maxn
 
 def mots_themes_tfidf(features,vect,N):
     '''
@@ -121,9 +115,18 @@ def mots_themes_tfidf(features,vect,N):
     @vect vecteur ayant servi à la transformation
     '''
     mots_theme={}
+    df=[]
     for t in features.keys():
-        mots_themes[t]=get_max_names(features[t],vect[t],N)
-    return mots_themes
+        mots_theme[t]=get_max_names(features[t],vect[t],N)
+    
+        df_=pd.concat([pd.DataFrame.from_dict(mots_theme[t][0]).T,
+                pd.DataFrame.from_dict(mots_theme[t][1])],axis=1)
+        df_.columns=['mots','importance']
+        df_['theme']=t
+        df.append(df_)
+    df=pd.concat([df[i] for i in range(len(df))])
+    
+    return df
 
 ####### Fonction LDA (sklearn)
 def LDA_mots(train,vect_theme,k=15,n=10):        
@@ -133,16 +136,29 @@ def LDA_mots(train,vect_theme,k=15,n=10):
         mots=[]
         lda = LatentDirichletAllocation(n_components=k)
         lda.fit(train[t])
+        coeff=[]
         for i in range(k):
             mots.append(pd.Series(
                 vect_theme[t].get_feature_names())[
                     lda.components_[i].argsort()[:n]].values)
-        mots_themes[t]=np.array(mots).flatten()
+            coeff.append(sorted(lda.components_[i],reverse=True)[:n])
+        mots_themes[t]=[[i,np.array(mots)[i], np.array(coeff)[i]] for i in range(k)]
     return mots_themes
 
-#%%
+
 ####### Fonction W2V KMeans
-def W2VKMEANS_mots(database,fenetre=15,minimum=1,d=300,len_min=2,racine=3):
+def euclid(x):
+    import numpy as np
+    d=np.sqrt(sum([i**2 for i in x]))
+    return d
+
+def cos_sim(x,y):
+    a=x@y
+    l=euclid(x)*euclid(y)
+    sim=a/l
+    return sim
+
+def W2VKMEANS_mots(database,fenetre=15,minimum=1,d=300,len_min=2,racine=3,num_clust=3):
     import gensim
     import numpy as np
     from unidecode import unidecode
@@ -160,17 +176,93 @@ def W2VKMEANS_mots(database,fenetre=15,minimum=1,d=300,len_min=2,racine=3):
         print(len(vocab_theme_wv))
         if len(vocab_theme_wv)!=0:
             vector=pd.concat([pd.DataFrame(W2V[v]).T for v in vocab_theme_wv])
+            vect_moyen=np.array([W2V[v].T for v in vocab_theme]).mean(axis=0)
             vector['index']=vocab_theme_wv
             vector.set_index(keys='index',inplace=True)
 
             from sklearn.cluster import KMeans
-            kmeansmodel=KMeans(n_clusters=3,n_init=20,max_iter=500)
+            kmeansmodel=KMeans(n_clusters=num_clust,n_init=20,max_iter=500)
             kmeans=kmeansmodel.fit(vector)
             vector['label']=kmeans.labels_
 
             groupe_theme=np.array([vector.label[vector.index==v].values[0] for v in vocab_theme_wv if v in vector.index])
-            mots_themes[t]=vector.index[vector.label==np.bincount(groupe_theme).argmax()]
+            mots_themes[t]=[vector.index[vector.label==np.bincount(groupe_theme).argmax()],
+                            [cos_sim(vect_moyen,W2V[v]) for v in vector.index[vector.label==np.bincount(groupe_theme).argmax()]]]
         else:
-            mots_themes[t]='empty'
+            mots_themes[t]=['empty','empty']
     return mots_themes
+# %%
+num_enjeux=5
+num_mots=5
+database=base_theme(df)
+features,vect_theme=vect_theme_tfidf(database)
+#%%
+# sub={k:features[k] for k in list(features.keys())[:2]}
+mots_themes_LSA=LSA_mots(features,vect_theme,num_enjeux*num_mots,n=10)
+#%%
+base_TFIDF=mots_themes_tfidf(features,vect_theme,num_mots)
+
+#%%
+mots_themes_LDA=LDA_mots(features,vect_theme,num_enjeux,num_mots)
+#%%
+sub2={k:database[k] for k in list(database.keys())[:2]}
+mots_themes_WKMeans=W2VKMEANS_mots(sub2)
+mots_themes_WKMeans['AGRICULTURE']
+# %%
+theme='AGRICULTURE'
+df=pd.DataFrame.from_dict([mots_themes_LSA[theme][i][1] for i in range(len(mots_themes_LSA[theme]))]).T
+df.columns=["topic_"+str(i) for i in range(df.shape[1])]
+df=df.reset_index()
+df=df.melt(id_vars=['index'],var_name='topic',value_name='mots')
+#%%
+imp=pd.DataFrame.from_dict([mots_themes_LSA[theme][i][2] for i in range(len(mots_themes_LSA[theme]))]).T
+imp.columns=["topic_"+str(i)+"_importance" for i in range(imp.shape[1])]
+imp=imp.reset_index()
+imp=imp.melt(id_vars=['index'],var_name='topic_imp',value_name='importance')
+base_LDA=pd.concat([df,imp],axis=1)
+base_LDA=base_LDA[['topic','mots','importance']]
+base_LDA['methode']='LSA'
+base_LDA['theme']=theme
+base_LDA
+# pd.DataFrame.from_dict(mots_themes_LDA['AGRICULTURE'])
+# pd.DataFrame.from_dict(mots_themes_LDA).T
+# %%
+def func_base(mots_themes,methode):
+    baselist=[]
+
+    if methode=="WKmeans":
+        for t in mots_themes.keys():
+            df=pd.DataFrame.from_dict(mots_themes_WKMeans[t]).T
+            df.columns=['mots','proximite']
+            df['theme']=t
+            baselist.append(df)
+        df=pd.concat([baselist[i] for i in range(len(baselist))])
+        df['methode']=methode
+
+    else:
+        for theme in mots_themes.keys():
+            df=pd.DataFrame.from_dict([mots_themes[theme][i][1] for i in range(len(mots_themes[theme]))]).T
+            df.columns=["topic_"+str(i) for i in range(df.shape[1])]
+            df=df.reset_index()
+            df=df.melt(id_vars=['index'],var_name='topic',value_name='mots')
+
+            imp=pd.DataFrame.from_dict([mots_themes[theme][i][2] for i in range(len(mots_themes[theme]))]).T
+            imp.columns=["topic_"+str(i)+"_importance" for i in range(imp.shape[1])]
+            imp=imp.reset_index()
+            imp=imp.melt(id_vars=['index'],var_name='topic_imp',value_name='importance')
+
+            base_LDA=pd.concat([df,imp],axis=1)
+            base_LDA=base_LDA[['topic','mots','importance']]
+            base_LDA['methode']=methode
+            base_LDA['theme']=theme
+            baselist.append(base_LDA)
+        df=pd.concat([baselist[i] for i in range(len(baselist))])
+    return df
+#%%
+base_LDA=func_base(mots_themes_LDA,'LDA')
+base_LSA=func_base(mots_themes_LSA,'LSA')
+base_WK=func_base(mots_themes_WKMeans,'WKmeans')
+base_finale=pd.concat([base_LDA,base_LSA,base_TFIDF,base_WK])
+base_finale
+
 # %%
