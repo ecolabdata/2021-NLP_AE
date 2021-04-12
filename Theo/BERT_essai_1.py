@@ -1,7 +1,8 @@
 #%%
 import torch
 from fairseq.models.roberta import CamembertModel
-camembert = CamembertModel.from_pretrained('C:/Users/theo.roudil-valentin/.cache/torch/hub/camembert-base/')
+camembert_path='C:/Users/theo.roudil-valentin/.cache/torch/hub/camembert-base/'
+camembert = CamembertModel.from_pretrained(camembert_path)
 # %%
 masked_line = 'Le camembert est <mask> :)'
 camembert.fill_mask(masked_line, topk=3)
@@ -15,6 +16,40 @@ assert last_layer_features.size() == torch.Size([1, 10, 768])
 all_layers = camembert.extract_features(tokens, return_all_hiddens=True)
 assert len(all_layers) == 13
 assert torch.all(all_layers[-1] == last_layer_features)
+#%%
+########################################################################################################
+#############   Prise en main      ###########################################################################################
+##################################################################################################################
+chemin_donnees="C:/Users/theo.roudil-valentin/Documents/Donnees/EI_txt/"
+chemin_modele="C:/Users/theo.roudil-valentin/Documents/Donnees/Modele_Transformer/"
+
+import torch
+from fairseq.models.roberta import CamembertModel
+camembert_path='C:/Users/theo.roudil-valentin/.cache/torch/hub/camembert-base/'
+camembert = CamembertModel.from_pretrained(camembert_path)
+
+from transformers import AdamW
+optimizer = AdamW(camembert.parameters(), lr=1e-5)
+
+from transformers import CamembertTokenizer
+tokenizer=CamembertTokenizer.from_pretrained(camembert_path)
+
+#%%
+text_batch = []
+for src_file in Path(chemin_donnees).glob("**/*.txt"):
+            print("🔥", src_file)
+            text_batch +=  src_file.read_text(encoding="utf-8").splitlines()
+            
+#%%
+encoding = tokenizer(text_batch, return_tensors='pt', padding='max_length', truncation=True)
+input_ids = encoding['input_ids']
+attention_mask = encoding['attention_mask']
+#%%
+labels = torch.tensor([1,0]).unsqueeze(0)
+outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+loss = outputs.loss
+loss.backward()
+optimizer.step()
 #%%
 ########################################################################################################
 #############    Extractive summarization            ###########################################################################################
