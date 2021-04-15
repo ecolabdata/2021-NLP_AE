@@ -37,12 +37,43 @@ base_html.to_csv(chemin+'base_html.csv')
 base_txt.to_csv(chemin+'base_txt.csv')
 # %%
 chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+
+try: 
+    os.mkdir(chemin+'PDF_EI/pasbon_html')
+except:
+    print('Le dossier existe déjà.')
+
 fichiers=os.listdir(chemin+'EI_html')
 fichiers=[f[:-5] for f in fichiers if f[-5:]=='.html']
 fichiers_html=fichiers
-chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+
 fichiers=os.listdir(chemin+'PDF_EI')
 fichiers=[f[:-4] for f in fichiers if f[-4:]=='.pdf']
 fichiers_pdf=fichiers
+
 pas_bon=[i for i in fichiers_pdf if i not in fichiers_html]
+import shutil
+for i in pas_bon:
+    shutil.copy(chemin+'PDF_EI/'+i+'.pdf',chemin+'PDF_EI/pasbon_html')
+
+# %%
+chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+try: 
+    os.mkdir(chemin+'PDF_EI/pasbon_txt')
+except:
+    print('Le dossier existe déjà.')
+
+fichiers=os.listdir(chemin+'EI_txt')
+fichiers=[f[:-5] for f in fichiers if f[-5:]=='.html']
+fichiers_html=fichiers
+
+fichiers=os.listdir(chemin+'PDF_EI')
+fichiers=[f[:-4] for f in fichiers if f[-4:]=='.pdf']
+fichiers_pdf=fichiers
+
+pas_bon=[i for i in fichiers_pdf if i not in fichiers_html]
+import shutil
+for i in pas_bon:
+    shutil.copy(chemin+'PDF_EI/'+i+'.pdf',chemin+'PDF_EI/pasbon_txt')
+
 # %%

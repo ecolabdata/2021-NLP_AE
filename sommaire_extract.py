@@ -1,45 +1,97 @@
+# %%
+' '.join([i for i in df.docs.to_list()])
 #%%
 from bs4 import BeautifulSoup
 import os
 import unicodedata
 import string
 import numpy as np
+import spacy
+import time
+from joblib import delayed,Parallel
+import sys
+from joblib import wrap_non_picklable_objects
+from spacy.util import minibatch
 # %%
-dirpath = '.\Data\TreatedFEIHTML'
-doc_path = os.listdir(dirpath)
+import pandas as pd
+chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+
+df_html=pd.read_csv(chemin+'base_html.csv')
+
 # %%
 
 #Extraction des textes dans les balises de liens "a"
-def toc_extractor(filepath):
-    file = unicodedata.normalize('NFKC',open(filepath,'rb').read().decode('utf-8'))
-    soup = BeautifulSoup(file, features = "html")
+def toc_extractor(f):
+    # file = unicodedata.normalize('NFKC',open(filepath,'rb').read().decode('utf-8'))
+    soup = BeautifulSoup(f, features = "html.parser")
     balises = soup.find_all('a',text = True)
     return [line.get_text().replace(u'\xa0',u'') for line in balises]
 
+#%%
 #Extraction des strings beautifulsoup : liste des balises (et du texte qu'elles contiennent si il y'en a). Suppression des balises sans texte
 # et de la liste des tailles de police (taille de la police i a l'indice i)
-def txtBalise_extractor(filepath):
-    file = unicodedata.normalize('NFKC',open(filepath,'rb').read().decode('utf-8'))
-    soup = BeautifulSoup(file, features = "html")
+
+# @wrap_non_picklable_objects
+def txtBalise_extractor(f):
+    # file = unicodedata.normalize('NFKC',open(filepath,'rb').read().decode('utf-8'))
+    soup = BeautifulSoup(f, "html.parser")
     first_font = 0
-    fonts = soup.style.contents[0].split('\n')
-    for id in range(len(fonts)):
-        if 'font' in fonts[id]:
-            first_font = id
-            break
-    fontsclean = fonts[first_font:len(fonts)-2]
-    fontsizes = []
-    for font in fontsclean:
-        deb = font.index('font:')
-        fin = font.index('pt')
-        size = int(font[deb+5:fin])
-        fontsizes.append(size)
-    balises = soup.find_all()
+    try:
+        fonts = soup.style.contents[0].split('\n')
+        for id in range(len(fonts)):
+            if 'font' in fonts[id]:
+                first_font = id
+                break
+        fontsclean = fonts[first_font:len(fonts)-2]
+        fontsizes = []
+        for font in fontsclean:
+            deb = font.index('font:')
+            fin = font.index('pt')
+            size = int(font[deb+5:fin])
+            fontsizes.append(size)
+        balises = soup.find_all()
+    except:
+        balises = soup.find_all()
+        fontsizes=[]
     return balises,fontsizes
-
-
-
+#%%
+def txtBalise_test(f):
+    # file = unicodedata.normalize('NFKC',open(filepath,'rb').read().decode('utf-8'))
+    soup = BeautifulSoup(f, "html.parser")
+    balises=soup.find_all()
+    return balises
+#%%
+N=1000 # marche avec 1000 mais pas avec 10 000 :'(
+b=[df_html.texte.values[0][:N],df_html.texte.values[1][:N]]
+sys.setrecursionlimit(1000000000) #cette solution n'a pas fonctionné
+Parallel(n_jobs=2)(delayed(txtBalise_extractor)(str(i)) for i in enumerate(b))
 # %%
+
+# partitions=minibatch(df_html.texte,10)
+start=time.time()
+ouais=Parallel(n_jobs=2,verbose=10)(delayed(txtBalise_extractor)(i) for i in df_html.texte.values)
+end=time.time()
+print('Durée :',round((end-start)/60,2),' minutes.')
+ouais
+#%%
+from unidecode import unidecode
+def puta(s):
+    b=[]
+    for i in s:
+        i=unidecode(i)
+        b.append(i)  
+    return b
+a=['ouaislyuvouciyfxrwea<(-vhjblkn']
+# puta(a[0])
+# Parallel(n_jobs=2)(delayed(puta)(i) for i in a)
+#%%
+start=time.time()
+ouais=Parallel(n_jobs=8,verbose=10)(delayed(txtBalise_extractor)(i) for i in df_html.texte[:2])
+end=time.time()
+print('Durée :',round((end-start)/60,2),' minutes.')
+ouais
+
+#%%
 #Sort l'id de l'étude
 def id_extractor(filepath):
     id = ''
@@ -48,10 +100,13 @@ def id_extractor(filepath):
             id += car
     return(id)
 
-# %%
+
 # Pour chaque ligne : on regarde la balise qui encapsule le texte et on extrait ses features (nom, type d'attribut, valeur des attributs)
 # Puis on accède au parent, on extrait les mêmes caracs, et on extrait les caracs des enfants du parents après avoir exclu la ligne en cours
 # Puis on accède au grand parent et on extrait ses caracs
+#%%
+from joblib import wrap_non_picklable_objects
+@wrap_non_picklable_objects
 def features_extractor(b4string,fontsizes):
     
     try:
@@ -131,11 +186,15 @@ def features_extractor(b4string,fontsizes):
 
     return(features)
 
-
+import sys
+sys.setrecursionlimit(100000)
+start=time.time()
+ouais=Parallel(n_jobs=8,verbose=10)(delayed(features_extractor)(i,z) for i,z in zip(doc_collection[0],doc_styles[0]))
+end=time.time()
+print('Durée :',round((end-start)/60,2),' minutes.')
 
 
 #%%
-
 #Construit la liste des features ligne par ligne
 #pour un document contenant une liste d'objets b4string
 def features(doc,fontsize):
@@ -168,7 +227,7 @@ def build_features(ftlists):
         k += 1
     return(feat_dico)
 
-#%%
+
 
 #Prend en entrée les features extraites ligne par ligne pour un doc,
 #le dico des features, pour construire la matrice des indicatrices
@@ -190,7 +249,7 @@ def encode_collection(docs_feature_collection,feature_names):
         child = encode_matrix(doc_feat,feature_names)
         matrix = np.concatenate((matrix,child),axis = 0)
     return(matrix)
-# %%
+
 
 #Nettoie "a la main" les titres pour enlever les éléments qui n'en sont pas
 
@@ -198,17 +257,24 @@ def Title_clean(resultsTitle):
     resultsTitleClean = []
     for result in resultsTitle:
         if 'www' in result:
-            pass
+            pass #Si il y a un "www" on prend pas
         else:
             try:
-                int(result)
+                int(result) #Si l'élèment est uniquement un chiffre on le prend pas
             except:
                 for car in result:
-                    if car.isnumeric()==True:
+                    if car.isnumeric()==True: #Si il y a au moins un numéro on le prend
                         resultsTitleClean.append(result)
                         break
     return(resultsTitleClean)
                 
+# title =df_html.texte[0]
+#%%
+import time
+start=time.time()
+Title_clean(title)
+end=time.time()
+print('Durée :',round(end-start,2),'secondes')
 
 
 # %%
@@ -232,19 +298,83 @@ def Encode_vector(doc_collection,Title_collection):
     return(vector)
 
 # %%
-
+soup = BeautifulSoup(df_html.texte[0], "html.parser")
+first_font = 0
+fonts = soup.style.contents[0].split('\n')
+fonts
+#%%
+for id in range(len(fonts)):
+    if 'font' in fonts[id]:
+        first_font = id
+        break
+fontsclean = fonts[first_font:len(fonts)-2]
+fontsizes = []
+for font in fontsclean:
+    deb = font.index('font:')
+    fin = font.index('pt')
+    size = int(font[deb+5:fin])
+    fontsizes.append(size)
+balises = soup.find_all()
+#%%
 doc_collection = []
 doc_styles = []
-for doc in doc_path:
-    doc, fonts = txtBalise_extractor(dirpath+'\\'+doc)
+start=time.time()
+for doc in df_html.texte:
+    doc, fonts = txtBalise_extractor(doc)
     doc_collection.append(doc)
     doc_styles.append(fonts)
+end=time.time()
+print("Durée :",round((end-start)/60,2),"minutes.")
+#%%
+def trans(textes, textes2,function,n_jobs=8,verbose=10):
+    import time
+    from joblib import Parallel, delayed
+    # texts = zip(textes,textes2) # on match les éléments au sein de "texts"
+    # partitions = minibatch(texts, size=batch_size) #crée les partitions sur lesquelles on va itérer, de dimensions batch_size sur l'élément texts
+    executor = Parallel(n_jobs=n_jobs, prefer="processes",verbose=verbose) # on sépare les tâches en n_jobs, et on crée l'exécuteur
+    do = delayed(function) #on prend la fonction transformation_texts et on fixe l'argument nlp (?) 
+    #delayed crée une liste de choses à éxécuter petit à petit, il indique qu'on va appliquer la fonction à une "liste" d'éléments
+    tasks = (do(i,z) for i,z in zip(textes,textes2)) # on crée la tâche, c'est-à-dire qu'on applique la fonction partial(tranfo_text,nlp) a une liste en lui disant de procéder par étapes (delayed)
+    start=time.time()
+    ouais=executor(tasks) # on exécute
+    end=time.time()
+    print("La tâche a pris :", round((end-start)/60,2),"minutes")
+    return ouais
+#%%
+from joblib import Parallel, delayed
+from functools import partial
+import os
+from spacy.util import minibatch
 
+#%%
+executor = Parallel(n_jobs=2,verbose=10) # on sépare les tâches en n_jobs, et on crée l'exécuteur
+do = delayed(features_extractor)  
 
-
+#%%
+#delayed crée une liste de choses à éxécuter petit à petit, il indique qu'on va appliquer la fonction à une "liste" d'éléments
+tasks = (do(i,z) for i,z in zip(doc_collection,doc_styles)) # on crée la tâche, c'est-à-dire qu'on applique la fonction partial(tranfo_text,nlp) a une liste en lui disant de procéder par étapes (delayed)
+ouais=executor(tasks) # on exécute
+#%%
+trans(doc_collection,doc_styles,features)
 # %%
+import time
+def func_async(i, *args):
+    return 2 * i
 
-feats_collection = features_collection(doc_collection,doc_styles)
+
+# We have to pass an extra argument with a large list (or another large python
+# object).
+large_list = list(range(1000000))
+
+t_start = time.time()
+wouhou=Parallel(n_jobs=2,verbose=10)(delayed(func_async)(i) for i in range(100))
+print("With loky backend and cloudpickle serialization: {:.3f}s"
+      .format(time.time() - t_start))
+wouhou
+
+
+#%%
+feats_collection = features_collection(doc_collection[:4],doc_styles[:4])
 
 #%%
 
@@ -252,11 +382,17 @@ features_name = build_features(feats_collection)
 
 # %%
 Title_collection = []
+start=time.time()
+for doc in df_html.texte:
 
-for doc in doc_path:
-    Title_collection.append(Title_clean(toc_extractor(dirpath+'\\'+doc)))
-
-#%%
+    Title_collection.append(Title_clean(toc_extractor(doc)))
+end=time.time()
+print(end-start)
+# %%
+start=time.time()
+[Title_clean(toc_extractor(i)) for i in df_html.texte]
+print(time.time()-start)
+# %%
 
 ft_matrix = encode_collection(feats_collection,features_name)
 
@@ -300,7 +436,5 @@ test_mat = encode_matrix(features(doc_collection[0],),features_name)
 # %%
 
 classif.predict(test_mat)
-
-# %%µ
 
 # %%
