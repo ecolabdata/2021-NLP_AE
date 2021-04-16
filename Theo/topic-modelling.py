@@ -8,8 +8,8 @@ import re
 chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
 
 df=pd.read_csv(chemin+'etudes_dataset_cleaned_prepared.csv',sep=";")
-X_train=df.docs[:25]
-X_test=df.docs[25:]
+# X_train=df.docs[:25]
+# X_test=df.docs[25:]
 
 theme=list(np.unique(re.sub("[\(\[].*?[\)\]]", "",
     re.sub(","," ",
@@ -329,7 +329,9 @@ for sent in sentence_stream:
 #############     Word2Vec et KMeans      ###########################################################################################
 ##################################################################################################################
 import gensim
-sentences = np.array([str(c).split() for c in list(database[theme[0]].docs)])
+sentence = np.array([str(c).split() for c in list(database[theme[0]].docs)])
+sentence
+#%%
 fenetre=15
 minimum=1
 d=300
@@ -361,3 +363,116 @@ vector['label']=kmeans.labels_ #La on a donc 15 groupes de mots,
 groupe_theme=np.array([vector.label[vector.index==v].values[0] for v in vocab_theme_wv if v in vector.index])
 groupe_theme
 # %%
+#########################################################################################################################
+#############   Supervisation      ###########################################################################################
+##################################################################################################################
+#%%
+import pandas as pd
+import numpy as np
+import sklearn
+import pickle
+import re
+from unidecode import unidecode
+import functools
+import operator
+
+chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+thesaurus=pickle.load(open(chemin+"Thesaurus_LegiFrance.pickle",'rb'))
+df=pd.read_csv(chemin+'base_html.csv').set_index(keys="num_etude")
+df
+#%%
+projets=pd.read_csv(chemin+'projets-environnement-diffusion.csv',sep=None)
+projets['num_etude_s']=[projets['DC.Relation.Expertise Ã©tudeimpact'][i].split('/')[-1][:-8] for i in projets.index]
+#%%
+print(projets.shape)
+projets=projets[projets[projets.columns[6]]=='clos']
+print(projets.shape)
+projets['num_etude']=[int(i) for i in projets.num_etude_s]
+projets.set_index(keys='num_etude',inplace=True)
+#%%
+theme=list(np.unique(re.sub("[\(\[].*?[\)\]]", "",
+    re.sub(","," ",
+        re.sub(";"," ",' '.join(np.unique(projets['ThÃ©matiques'].values))))).split(' ')))
+theme.remove('ET'),theme.remove('')
+# theme=[unidecode(i.lower()) for i in theme]
+#%%
+projets['theme']=[re.sub("[\(\[].*?[\)\]]", "",
+    re.sub(","," ",
+        re.sub(";"," ",' '.join(np.unique(projets['ThÃ©matiques'].values[i]))))).split(' ')
+         for i in range(len(projets))]
+#%%
+base=pd.concat([df,projets],axis=1)
+base=base[base.texte.isna()==False]
+#%%
+from bs4 import BeautifulSoup
+base['clean']=[unidecode(re.sub(r'[^A-Za-z]',' ',
+                BeautifulSoup(
+                    base.texte.values[i],"html.parser").get_text()).lower())
+                     for i in range(len(base))]
+#%%
+base['clean']=[' '.join([i for i in base.clean.values[k].split() if len(i)>3]) for k in range(len(base))]
+# %%
+thesau={}
+for i in thesaurus.keys():
+    thesau[i]=[z[0] for z in thesaurus[i]]
+
+# %%
+E_T_=functools.reduce(operator.iconcat, list(thesau.values()), [])
+E_T_=[unidecode(i.lower()) for i in E_T_]
+# %%
+import gensim
+sentences =np.array([str(c).split() for c in base.clean.values])
+#%%
+#On crée et entraine le modèle d'embedding
+fenetre=15
+minimum=1
+d=300
+W2V=gensim.models.Word2Vec(size=d,window=fenetre,min_count=minimum)
+W2V.build_vocab(sentences)
+W2V.train(sentences,total_examples=W2V.corpus_count,epochs=50)
+#%%
+#Ensemble de mots du modèle
+M=list(W2V.wv.vocab.keys())
+len(M)
+#%%
+#Ensemble de mots du Thesaurus contenu dans le vocab du modèle
+E_T_tilde=[i for i in E_T_ if i in M]
+print(len(E_T_tilde))
+#Thèmes qui sont dans l'ensemble de mots
+T_tilde=[i for i in [unidecode(z.lower()) for z in theme] if i in M]
+len(T_tilde)
+#%%
+#On va prendre les vecteurs de ce sous-ensemble :
+Vect_E_T_tilde=[W2V[v] for v in E_T_tilde]
+#On récupère l'ensemble des vecteurs de chaque mot
+Vect_M=[W2V[v] for v in M]
+#On récup les vecteurs des thèmes
+Vect_T_tile=[W2V[v] for v in T_tilde]
+#%%
+def euclid(x):
+    import numpy as np
+    d=np.sqrt(sum([i**2 for i in x]))
+    return d
+
+def cos_sim(x,y):
+    a=x@y
+    l=euclid(x)*euclid(y)
+    sim=a/l
+    return sim
+
+
+cos_moyen=[np.mean([cos_sim(z,v) for v in Vect_E_T_tilde])
+ for z in Vect_M]
+#%%
+pd.DataFrame(Vect_M,columns=M)
+
+# %%
+vocabulaire=[v for v in list(set(W2V.wv.vocab)) if len(v)>2]
+vocab_theme=[v for v in vocabulaire if v[:3]==theme[0].lower()[:3]]
+vocab_theme_wv=np.array([W2V.most_similar(t)[i][0] for t in vocab_theme for i in range(10)]).flatten()
+vocab_theme_wv=[v for v in vocab_theme_wv if len(v)>2]
+vocab_theme_wv #mots les plus similaires des mots qui partagent la racine du thème
+#%%
+vector=pd.concat([pd.DataFrame(W2V[v]).T for v in vocab_theme_wv])
+vector['index']=vocab_theme_wv
+vector.set_index(keys='index',inplace=True)
