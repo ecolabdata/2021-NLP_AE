@@ -45,12 +45,12 @@ from transformers import CamembertTokenizer,CamembertForSequenceClassification
 tokenizer=CamembertTokenizer.from_pretrained(camembert_path)
 
 #%%
-from pathlib import Path
-text_batch = []
-for src_file in Path(chemin_donnees).glob("**/*.txt"):
-            print("🔥", src_file)
-            text_batch +=  src_file.read_text(encoding="utf-8").splitlines()
-            
+# from pathlib import Path
+# text_batch = []
+# for src_file in Path(chemin_donnees).glob("**/*.txt"):
+#             print("🔥", src_file)
+#             text_batch +=  src_file.read_text(encoding="utf-8").splitlines()
+text_batch=pickle.load(open(chemin_modele+'text_batch_1.pickle','rb'))   
 #%%
 ml=512
 N=10
@@ -63,14 +63,14 @@ encoding = tokenizer(text_batch[z], return_tensors='pt',max_length=ml, padding='
 #Prenons l'exemple de la phrase 9 de notre ensemble de texte :
 print(text_batch[z],len(text_batch[z]))
 print(tokenizer.tokenize(text_batch[z]),len(tokenizer.tokenize(text_batch[z])))
-print(encoding['input_ids'][0])
-print(encoding['attention_mask'][0])
+# print(encoding['input_ids'][0])
+# print(encoding['attention_mask'][0])
 #%%
 ##################### Faire marcher camembert sur une ligne d'exemple
 outputs=camembert(**encoding)
 #%%
 last_hidden_states = outputs.last_hidden_state
-last_hidden_states
+last_hidden_states.shape
 #%%
 forward=camembert.forward(input_ids=encoding['input_ids'],
         attention_mask=encoding['attention_mask'],
@@ -249,15 +249,17 @@ camembert_path='C:/Users/theo.roudil-valentin/.cache/torch/hub/camembert-base/'
 from transformers import CamembertTokenizer
 tokenizer=CamembertTokenizer.from_pretrained(camembert_path)
 
-
+import time
+import pickle
 from pathlib import Path
+#%%
 text_batch = []
 for src_file in Path(chemin_donnees).glob("**/*.txt"):
             print("🔥", src_file)
             text_batch +=  src_file.read_text(encoding="utf-8").splitlines()
-            
-#%%
-import time
+
+pickle.dump(text_batch,open(chemin_modele+"text_batch_1.pickle",'wb'))
+          
 ml=512
 # N=10
 # z=9
@@ -265,10 +267,99 @@ start=time.time()
 encoding = tokenizer(text_batch, return_tensors='pt',max_length=ml, padding='max_length', truncation=True)
 end=time.time()
 print('La tokenization a durée :',round((end-start)/60,2),"minutes")
+
+pickle.dump(encoding,open(chemin_modele+'encoding_1.pickle','wb'))
+#%%
+text_batch=pickle.load(open(chemin_modele+'text_batch_1.pickle','rb'))
+encoding=pickle.load(open(chemin_modele+'encoding_1.pickle','rb'))
 #%%
 print(encoding['attention_mask'].shape)
-distrib=[i.sum() for i in encoding['attention_mask']]
+distrib_tokens=[int(i.sum()) for i in encoding['attention_mask']]
+distrib_mots=[len(i.split(' ')) for i in text_batch]
+#%%
+import numpy as np
+print("La moyenne du nombre de tokens est :",round(np.mean(distrib_tokens),3))
+## 32,622
 
+print("L'écart-type du nombre de tokens est :",round(np.std(distrib_tokens),3))
+## 32,068
+
+print("Le max des tokens est :",max(distrib_tokens))
+#512 en fait max_length
+
+print("La moyenne du nombre de mots est :",round(np.mean(distrib_mots),3))
+## 11,258
+
+print("L'écart-type du nombre de mots est :",round(np.std(distrib_mots),3))
+##17,997
+
+print("Le max des mots est :",max(distrib_mots))
+#1041
+#%%
+import matplotlib.pyplot as plt
+f,a=plt.subplots(1,figsize=(14,10))
+a.hist(distrib_mots,density=True)
+a.set(xlabel="nombre de mots",ylabel='quantité de phrases',
+      title='Distribution du nombre de tokens')
+plt.legend(['Tokens','mots'])
+#%%
+import matplotlib.pyplot as plt
+f,a=plt.subplots(1,figsize=(14,10))
+a.hist(distrib_tokens,density=True)
+a.set(xlabel="nombre de tokens",ylabel='quantité de phrases',
+      title='Distribution du nombre de tokens')
+plt.legend(['Tokens','mots'])
+#%%
+z=250
+z_plus_grand=[i for i in distrib_tokens if i>z]
+print("Il y a",len(z_plus_grand),"phrases de plus de",z,"tokens \nsoit",round(len(z_plus_grand)/len(distrib_tokens)*100,2),"%","des phrases")
+#%%
+########################################################################################################
+#############   Petit essai concat phrase comme section      ###########################################################################################
+##################################################################################################################
+chemin_modele="C:/Users/theo.roudil-valentin/Documents/Donnees/Modele_Transformer/"
+
+import torch
+camembert_path='C:/Users/theo.roudil-valentin/.cache/torch/hub/camembert-base/'
+
+from transformers import CamembertTokenizer
+tokenizer=CamembertTokenizer.from_pretrained(camembert_path)
+
+import time
+import pickle
+from pathlib import Path
+
+text_batch=pickle.load(open(chemin_modele+'text_batch_1.pickle','rb'))
+encoding=pickle.load(open(chemin_modele+'encoding_1.pickle','rb'))
+#%%
+###### Essai 1 : pas top
+bos=tokenizer.bos_token
+SEP=tokenizer.sep_token
+eos=tokenizer.eos_token
+z=997
+exemple_section=CLS+text_batch[z]+eos+SEP+text_batch[z+1]+eos+SEP+text_batch[z+2]+eos
+exemple_section
+#%%
+ml=512
+print(tokenizer.tokenize(exemple_section))
+tok_ex=tokenizer(exemple_section,return_tensors='pt',max_length=ml, padding='max_length', truncation=True)
+tok_ex
+# %%
+for i in range(60):
+    print(tokenizer.tokenize(exemple_section)[i],tok_ex['input_ids'][0][i])
+#%%
+###### Essai 2 : 
+toksiko=[tokenizer(text_batch[z]).input_ids for z in range(997,1000)]
+token=[tokenizer.tokenize(text_batch[z]) for z in range(997,1000)]
+#%%
+print(toksiko[0],token[0])
+print(toksiko[1],token[1])
+#%%
+toks=tokenizer.build_inputs_with_special_tokens(toksiko[0],toksiko[1])
+toks=tokenizer.build_inputs_with_special_tokens(toks,toksiko[2])
+print(toks)
+# %%
+from transformers import CamembertTokenizerFast
 
 #%%
 ########################################################################################################
