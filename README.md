@@ -5,7 +5,7 @@ Bienvenue dans le référentiel consacré au projet de l'Ecolab sur le Traitemen
 Vous pourrez trouver ici les codes finis et les codes exploratoires produits par l'équipe en charge du projet.
 
 En mars, le projet est divisé en plusieurs parties : 
-- une partie sur le traitement des enjeux (via du **topic modelling**)
-- une autre sur l'extraction (pouvant être *automatique*) de sommaire de documents PDF
-- enfin une autre sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*)
+1. une partie sur le traitement des enjeux (via du **topic modelling**)
+2. une autre sur l'extraction (pouvant être *automatique*) de sommaire de documents PDF
+3. enfin une autre sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*)
 
