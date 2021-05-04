@@ -109,132 +109,7 @@ out=camembert(input_ids[:10])
 loss = model.loss
 loss.backward()
 optimizer.step()
-#%%
-#####################
-#### Première généralisation
-#####################
 
-import torch.nn as nn
-################ Custom Camembert
-
-class CustomCamembert(nn.Module):
-    def __init__(self):#,num_labels=2): Nous on a pas de labels, donc pas besoin
-        super(CustomCamembert,self).__init__()
-        self.camembert=CamembertModel.from_pretrained("camembert-base")
-        self.dropout = nn.Dropout(.05)
-        self.classifier = nn.Linear(768, DIMENSION ???)
-        
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
-        _ , pooled_output = self.roberta(input_ids, token_type_ids, attention_mask)
-        logits = self.classifier(pooled_output)        
-        return logits
-#### Initialize the model
-camembert_new= = CustomCamembert()
-
-#%%
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-############ Exemples pour TensorDataset et DataLoader :
-unit=50
-dim=512
-#Dans TensorDataset, tu peux mettre autant de tensor que tu veux en fait
-#Il faudra juste bien se souvenir de leur rang pour bien les appeler une fois
-#qu'on en aura besoin
-ex_data=TensorDataset(torch.randn([unit,dim]),torch.randn([unit,dim]),
-                        torch.randn([unit,dim]),torch.randn([unit,2]))
-batch_size=32
-
-#On définit un "chargeur de données", qui va sélectionner des groupes de taille batch_size
-#de manière aléatoire dans les données qu'on lui donne, ici : ex_data
-ex_dataloader = DataLoader(
-            ex_data,
-            sampler = RandomSampler(ex_data),
-            batch_size = batch_size)
-
-for step,batch in enumerate(ex_dataloader):
-    print(batch[0])
-
-#%%
-
-################ Un exemple de training supervisé
-
-train_dataset = TensorDataset(
-    encoding['input_ids'][:split_border],
-    encoding['attention_mask'][:split_border],
-    sentiments[:split_border])
-validation_dataset = TensorDataset(
-    encoded_batch['input_ids'][split_border:],
-    encoded_batch['attention_mask'][split_border:],
-    sentiments[split_border:])
-
-
-
-device = torch.device("cpu")
-training_stats = []
-epochs=3
- 
-# Boucle d'entrainement
-for epoch in range(0, epochs):
-     
-    print("")
-    print(f'########## Epoch {epoch+1} / {epochs} ##########')
-    print('Training...')
- 
- 
-    # On initialise la loss pour cette epoque
-    total_train_loss = 0
- 
-    # On met le modele en mode 'training'
-    # Dans ce mode certaines couches du modele agissent differement
-    model.train()
- 
-    # Pour chaque batch
-    for step, batch in enumerate(train_dataloader):
- 
-        # On fait un print chaque 40 batchs
-        if step % 40 == 0 and not step == 0:
-            print(f'  Batch {step}  of 
-{len(train_dataloader)}.')
-         
-        # On recupere les donnees du batch
-        input_id = batch[0].to(device)
-        attention_mask = batch[1].to(device)
-        sentiment = batch[2].to(device)
- 
-        # On met le gradient a 0
-        model.zero_grad()        
- 
-        # On passe la donnee au model et on recupere la loss et le logits (sortie avant fonction d'activation)
-        loss, logits = model(input_id, 
-                             token_type_ids=None, 
-                             attention_mask=attention_mask, 
-                             labels=sentiment)
- 
-        # On incremente la loss totale
-        # .item() donne la valeur numerique de la loss
-        total_train_loss += loss.item()
- 
-        # Backpropagtion
-        loss.backward()
- 
-        # On actualise les parametrer grace a l'optimizer
-        optimizer.step()
- 
-    # On calcule la  loss moyenne sur toute l'epoque
-    avg_train_loss = total_train_loss / len(train_dataloader)   
- 
-    print("")
-    print("  Average training loss: {0:.2f}".format(avg_train_loss))  
-     
-    # Enregistrement des stats de l'epoque
-    training_stats.append(
-        {
-            'epoch': epoch + 1,
-            'Training Loss': avg_train_loss,
-        }
-    )
- 
-print("Model saved!")
-torch.save(model.state_dict(), "./sentiments.pt")
 #%%
 ########################################################################################################
 #############    Distribution du nombre de tokens par phrase      ###########################################################################################
@@ -358,8 +233,298 @@ print(toksiko[1],token[1])
 toks=tokenizer.build_inputs_with_special_tokens(toksiko[0],toksiko[1])
 toks=tokenizer.build_inputs_with_special_tokens(toks,toksiko[2])
 print(toks)
-# %%
-from transformers import CamembertTokenizerFast
+#%%
+########################################################################################################
+#############   OrangeSum            ###########################################################################################
+##################################################################################################################
+chemin_d="C:/Users/theo.roudil-valentin/Documents/OrangeSum/"
+train_chemin=chemin_d+'splits_title_as_summary/train.txt'
+
+#%%
+# On ouvre et sélectionne le nom des fichiers du train
+with open(train_chemin,'rb') as f:
+    f=f.read().splitlines()
+# f
+texte=[]
+#On récupère les fichiers du train qui ont été parsed
+for i in f:
+    with open(chemin_d+'parsed/'+i.decode(),'rb') as g:
+        ouais=json.load(g)
+        texte.append(ouais) #On ajoute ça dans notre liste (liste de dict donc)
+        for k in list(ouais.keys()):
+            print(k)
+            #Ici on va séparer le dict.json en 4 documents txt
+            #En effet, on a besoin de fichiers txt nous
+            with open(chemin_d+'parsed/'+i.decode()[:-5]+'_'+str(k)+'.txt','w') as h:
+                try:
+                    h.write(ouais[k])
+                except:
+                    continue
+#%%
+try:
+    os.mkdir(chemin_d+'parsed_txt')
+except:
+    print('le dossier existe déjà')
+
+
+import shutil
+parsed=os.listdir(chemin_d+'parsed')
+print(parsed)
+parsed=[i for i in parsed if i[-3:]=='txt']
+#Là on va déplacer les fichier txt parsed dans un fichier
+#Et on va supprimer les fichiers txt de parsed (que des json)
+#Pour plus de clarté quoi
+for i in tqdm(parsed):
+    # print(i)
+    shutil.copy(chemin_d+'parsed/'+i,chemin_d+'parsed_txt')
+    os.remove(chemin_d+'parsed/'+i)
+#%%
+#On fait un grand fichier txt qui contient sur chaque ligne un article
+#Pourquoi ? On va entraîner ensuite un SentencePiece
+#Pour cela on a besoin d'un fichier de ce format (txt, une ligne un doc)
+from unidecode import unidecode
+a=unidecode(texte[0]['article'])+'\n'
+for i in tqdm(range(len(texte))):
+    a+=unidecode(texte[i]['article'])+'\n'
+with open(chemin_d+'article.txt','w') as h:
+    h.write(a)
+#%%
+b=unidecode(texte[0]['heading'])+'\n'
+for i in tqdm(range(len(texte))):
+    b+=unidecode(texte[i]['heading'])+'\n'
+with open(chemin_d+'heading.txt','w') as h:
+    h.write(b)
+#%%
+################
+### Entraînement d'un tokenizer from scratch
+################
+
+with open(chemin_d+'article.txt','r') as h:
+    article=h.read()
+with open(chemin_d+'heading.txt','r') as h:
+    heading=h.read()
+#%%
+print(heading.split('\n')[0])
+print(article.split('\n')[0])
+#%%
+heading_test=heading.split('\n')[0].split('.')
+article_test=article.split('\n')[0].split('.')
+#%%
+heading.split('\n')[0] in article.split('\n')[0]
+#%%
+#%%
+#On utilise SentencePiece, 
+# un modèle de représentation en tokens non-supervisé (Google)
+
+import sentencepiece as spm 
+#L'input doit être un fichier .txt
+FUES=spm.SentencePieceTrainer.train(
+    input=chemin_d+'article.txt', #chemin vers le fichier txt, un doc par ligne
+    vocab_size=8000, #taille du vocab, peut être augmenté, ne doit pas être trop grand par rapport aux mots des documents
+    model_prefix='FUES', #nom du modèle, French Unsupervised Exctractive Summarizer
+    model_type='bpe') #Type de modèle Byte-Pair Encoding (Sennrich et al 2016)
+#%%
+spro=spm.SentencePieceProcessor()
+spro.Load(chemin_d+'FUES.model')
+
+spro.encode(a.split('\n')[1][:100],
+        add_bos=True,add_eos=True,out_type=str)
+#%%
+######### On va mettre le modèle SentencePiece dans le Camembert Tokenizer
+#Et donc on a notre tokenizer homemade !
+from transformers import CamembertTokenizer
+tokenizer=CamembertTokenizer(chemin_d+'FUES.model')
+#%%
+bos=tokenizer.bos_token
+SEP=tokenizer.sep_token
+eos=tokenizer.eos_token
+#%%
+z=0
+seuil=10
+sentence=[bos+i+eos for i in a.split('\n')[0].split('.') if len(i)>seuil]
+exemple_section=''.join(sentence)
+#%%
+#Bon par contre je n'arrive pas à lui faire comprendre que <s> c'est un seul token
+#Il le coupe mais il devrait pas ?!
+ml=512
+print(tokenizer.tokenize(exemple_section))
+tok_ex=tokenizer(exemple_section,return_tensors='pt',max_length=ml, padding='max_length', truncation=True)
+tok_ex
+#%%
+from transformers import CamembertModel
+camem=CamembertModel.from_pretrained("camembert-base")
+camem(tok_ex['input_ids'])
+
+
+##################### 
+#### Première généralisation
+#####################
+
+import torch.nn as nn
+################ Custom Camembert
+
+class CustomCamembert(nn.Module):
+    def __init__(self):#,num_labels=2): Nous on a pas de labels, donc pas besoin
+        super(CustomCamembert,self).__init__()
+        self.camembert=CamembertModel.from_pretrained("camembert-base")
+        self.dropout = nn.Dropout(.05)
+        self.classifier = nn.Linear(768, )
+        
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+        _ , pooled_output = self.roberta(input_ids, token_type_ids, attention_mask)
+        logits = self.classifier(pooled_output)        
+        return logits
+
+#### Initialize the model
+camembert_new= CustomCamembert()
+
+#%%
+from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
+############ Exemples pour TensorDataset et DataLoader :
+unit=50
+dim=512
+#Dans TensorDataset, tu peux mettre autant de tensor que tu veux en fait
+#Il faudra juste bien se souvenir de leur rang pour bien les appeler une fois
+#qu'on en aura besoin
+ex_data=TensorDataset(torch.randn([unit,dim]),torch.randn([unit,dim]),
+                        torch.randn([unit,dim]),torch.randn([unit,2]))
+batch_size=32
+
+#On définit un "chargeur de données", qui va sélectionner des groupes de taille batch_size
+#de manière aléatoire dans les données qu'on lui donne, ici : ex_data
+ex_dataloader = DataLoader(
+            ex_data,
+            sampler = RandomSampler(ex_data),
+            batch_size = batch_size)
+#%%
+for step,batch in enumerate(ex_dataloader):
+    print(batch)
+
+#%%
+
+################ Un exemple de training supervisé
+
+train_dataset = TensorDataset(
+    encoding['input_ids'][:split_border],
+    encoding['attention_mask'][:split_border],
+    sentiments[:split_border])
+validation_dataset = TensorDataset(
+    encoded_batch['input_ids'][split_border:],
+    encoded_batch['attention_mask'][split_border:],
+    sentiments[split_border:])
+
+
+
+device = torch.device("cpu")
+training_stats = []
+epochs=3
+ 
+# Boucle d'entrainement
+for epoch in range(0, epochs):
+     
+    print("")
+    print(f'########## Epoch {epoch+1} / {epochs} ##########')
+    print('Training...')
+ 
+ 
+    # On initialise la loss pour cette epoque
+    total_train_loss = 0
+ 
+    # On met le modele en mode 'training'
+    # Dans ce mode certaines couches du modele agissent differement
+    model.train()
+ 
+    # Pour chaque batch
+    for step, batch in enumerate(train_dataloader):
+ 
+        # On fait un print chaque 40 batchs
+        if step % 40 == 0 and not step == 0:
+            print(f'  Batch {step}  of 
+{len(train_dataloader)}.')
+         
+        # On recupere les donnees du batch
+        input_id = batch[0].to(device)
+        attention_mask = batch[1].to(device)
+        sentiment = batch[2].to(device)
+ 
+        # On met le gradient a 0
+        model.zero_grad()        
+ 
+        # On passe la donnee au model et on recupere la loss et le logits (sortie avant fonction d'activation)
+        loss, logits = model(input_id, 
+                             token_type_ids=None, 
+                             attention_mask=attention_mask, 
+                             labels=sentiment)
+ 
+        # On incremente la loss totale
+        # .item() donne la valeur numerique de la loss
+        total_train_loss += loss.item()
+ 
+        # Backpropagtion
+        loss.backward()
+ 
+        # On actualise les parametrer grace a l'optimizer
+        optimizer.step()
+ 
+    # On calcule la  loss moyenne sur toute l'epoque
+    avg_train_loss = total_train_loss / len(train_dataloader)   
+ 
+    print("")
+    print("  Average training loss: {0:.2f}".format(avg_train_loss))  
+     
+    # Enregistrement des stats de l'epoque
+    training_stats.append(
+        {
+            'epoch': epoch + 1,
+            'Training Loss': avg_train_loss,
+        }
+    )
+ 
+print("Model saved!")
+torch.save(model.state_dict(), "./sentiments.pt")
+#%%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #%%
 ########################################################################################################
