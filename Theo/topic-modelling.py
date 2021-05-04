@@ -390,6 +390,8 @@ print(projets.shape)
 projets['num_etude']=[int(i) for i in projets.num_etude_s]
 projets.set_index(keys='num_etude',inplace=True)
 #%%
+projets.loc[:,["ThÃ©matiques"]].to_csv(chemin+"num_theme.csv")
+#%%
 theme=list(np.unique(re.sub("[\(\[].*?[\)\]]", "",
     re.sub(","," ",
         re.sub(";"," ",' '.join(np.unique(projets['ThÃ©matiques'].values))))).split(' ')))
@@ -429,7 +431,7 @@ minimum=1
 d=300
 W2V=gensim.models.Word2Vec(size=d,window=fenetre,min_count=minimum)
 W2V.build_vocab(sentences)
-W2V.train(sentences,total_examples=W2V.corpus_count,epochs=50)
+W2V.train(sentences,total_examples=W2V.corpus_count,epochs=10)
 #%%
 #Ensemble de mots du modèle
 M=list(W2V.wv.vocab.keys())
@@ -444,10 +446,13 @@ len(T_tilde)
 #%%
 #On va prendre les vecteurs de ce sous-ensemble :
 Vect_E_T_tilde=[W2V[v] for v in E_T_tilde]
+print(len(Vect_E_T_tilde))
 #On récupère l'ensemble des vecteurs de chaque mot
 Vect_M=[W2V[v] for v in M]
+print(len(Vect_M))
 #On récup les vecteurs des thèmes
-Vect_T_tile=[W2V[v] for v in T_tilde]
+Vect_T_tilde=[W2V[v] for v in T_tilde]
+print(Vect_T_tilde)
 #%%
 def euclid(x):
     import numpy as np
@@ -460,11 +465,47 @@ def cos_sim(x,y):
     sim=a/l
     return sim
 
-
-cos_moyen=[np.mean([cos_sim(z,v) for v in Vect_E_T_tilde])
- for z in Vect_M]
 #%%
-pd.DataFrame(Vect_M,columns=M)
+# cos_moyen=[np.mean([cos_sim(z,v) for v in Vect_E_T_tilde])
+#  for z in Vect_M]
+#%%
+from joblib import Parallel,delayed
+import time
+duree=[]
+absi=[]
+for i in range(2,11):
+    absi.append(i)
+    start=time.time()
+    Parallel(n_jobs=i,verbose=0)(delayed(cos_sim)(Vect_M[0],v) for v in Vect_E_T_tilde)
+    end=time.time()
+    duree.append(end-start)
+
+import matplotlib.pyplot as plt
+f,a=plt.subplots(1,figsize=(12,6))
+a.plot(absi,duree)
+a.set(xlabel="Nombre de job",ylabel='Durée',
+      title='Durée en fonction du degré de parallélisation')
+#%%
+from joblib import Parallel,delayed
+
+from tqdm import tqdm
+# ouais=Parallel(n_jobs=10,verbose=0)(delayed(cos_sim)(Vect_M[0],v) for v in Vect_E_T_tilde)
+start=time.time()
+cos_moyen=[np.mean(
+    Parallel(n_jobs=10,verbose=0)(delayed(cos_sim)(m,v) for v in Vect_E_T_tilde))
+  for m in tqdm(Vect_M)]
+end=time.time()
+print("La parallélisation a durée :",round((end-start)/60,3),"minutes")
+#%% 
+from functools import partial
+
+start=time.time()
+cos_moyen=[Parallel(n_jobs=10,verbose=0)(np.mean(cos_sim(m,v) for v in Vect_E_T_tilde))(m)
+  for m in Vect_M)]
+end=time.time()
+print("La parallélisation a durée :",round((end-start)/60,3),"minutes")
+
+# pd.DataFrame(Vect_M,columns=M)
 
 # %%
 vocabulaire=[v for v in list(set(W2V.wv.vocab)) if len(v)>2]
