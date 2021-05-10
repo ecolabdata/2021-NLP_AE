@@ -14,6 +14,12 @@ import re
 from unidecode import unidecode
 import functools
 import operator
+import psutil
+from joblib import Parallel,delayed
+from functools import partial
+import time
+import torch
+import torch.nn as nn
 #%%
 ##### On crée le fichier ligne par ligne article+résumé pour l'entraînement du tokenizer
 ###################
@@ -175,13 +181,10 @@ def make_tensor_clss(clss):
     return clss
 
 #%%
-import psutil
 cpu=psutil.cpu_count()
 print("Nombre de coeur utilisé :",cpu)
 
-from joblib import Parallel,delayed
-from functools import partial
-import time
+
 start=time.time()
 encod_articles_=partial(encod_articles,tokenizer=tokenizer)
 articles_encodees=Parallel(n_jobs=cpu)(delayed(encod_articles_)(arti,out) for arti,out in zip(articles,output_))
@@ -243,28 +246,16 @@ dico_test={
     'mask_cls':test_mask_cls
 }
 pickle.dump(dico_test,open(chemin_d+'dico_test.pickle','wb'))
-
 #%%
-train_dataset = TensorDataset(
-    torch.tensor(train_input_ids))#,
-    # train_mask,
-    # train_segs,
-    # train_clss,
-    # train_output)
+dico_train=pickle.load(open(chemin_d+'dico_train.pickle','rb'))
 #%%
-validation_dataset = TensorDataset(
-    test_input_ids,
-    test_mask,
-    test_segs,
-    test_clss,
-    test_output)
+train_input_ids=dico_train['input']
+train_mask=dico_train['mask']
+clss=make_tensor_clss(dico_train['clss'])
+train_mask_cls=dico_train['mask_cls']
+train_output=dico_train['output']
 
-batch_size=32
 
-dataloader = DataLoader(
-            train_dataset,
-            sampler = RandomSampler(train_dataset),
-            batch_size = batch_size)
 #%%
 from transformers import CamembertModel,BertModel,RobertaModel
 camem=CamembertModel.from_pretrained("camembert-base")
@@ -279,7 +270,7 @@ print(T.last_hidden_state.shape) # nbre de docs * dim input (512) * 768
 #comme ça on aurait dim_sortie_finale = nbr de docs * nbr de phrases * 1 (ou 2)
 T.pooler_output.shape # nbre de docs * 768
 #%%
-
+import torch.nn as nn
 class Classifier(nn.Module):
     def __init__(self, hidden_size):
         super(Classifier, self).__init__()
@@ -354,17 +345,29 @@ attn_output, attn_output_weights = multihead_attn(query, key, value)
 
 
 #%%
+
 tens=torch.as_tensor([list(train_mask_cls[i]) for i in range(3)])
-phrase=torch.mul(topvec,tens)
+phrase=torch.mul(topvec[0],tens)
 
 # torch.max(phrase).item()
-# phrase.argmax()
+#phrase.argmax()
 index_phrase=torch.topk(phrase,3)[1]
 pred_phrase=torch.zeros(clss[:3].shape)
 #%%
-# for k in range(3):
-#     # print(k)
-index_1=[[train_clss[k].index(index_phrase[k][i]) for i in range(len(index_phrase[k]))] for k in range(3)]
+############################################
+###### Problème important (10/05/21) : que faire quand moins de trois phrases sont prédites ?
+###### Pourquoi ne pas laisser le score et choisir en fonction de ça ?
+############################################
+#En fait c'est à ce moment qu'on aurait besoin d'un segment mais bon...
+#En gros le problème c'est : si le réseau associe un score élevé à un tokens qui n'est pas un début de phrase, il sera invisibilisé par la multiplication du mask
+#Donc, comment on fait ? Pour le moment, on perd purement et simplement l'info
+#Je propose d'être plus général, et de laisser le réseau prédire ce qu'il veut en récupérant différemment l'info
+#Par exemple, en prenant simplement les 3 max scores sur 512 et repérer la phrase à laquelle appartient le token
+#Ensuite simplement récupérer la phrase, et la suite reste la même 
+
+
+index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) for i in range(len(index_phrase[k]))] for k in range(3)]
+#%%
 index_2=[[i] for i in range(3)] #clss.shape[0]
 pred_phrase[index_2,index_1]=torch.ones(index_phrase.shape)
 pred_phrase
@@ -377,10 +380,107 @@ score_1=[(a[i][1][1])/3 for i in range(len(pred_phrase))]
 print(score_1)
 print("Au total il y a ",round(np.mean(score_total),2),"bonnes prédictions,\n",np.sum(score_1),"bonnes phrases sont prédites")
 #%%
+tes
+#%%
+train_dataset = TensorDataset(
+    torch.tensor(train_input_ids),
+    torch.tensor(train_mask),
+    train_clss,
+    torch.as_tensor([list(train_mask_cls[i]) for i in range(len(train_mask_cls))]),
+    train_output)
 
+validation_dataset = TensorDataset(
+    torch.tensor(test_input_ids),
+    torch.tensor(test_mask),
+    test_clss,
+    torch.as_tensor([list(test_mask_cls[i]) for i in range(len(test_mask_cls))]),
+    test_output)
 
+batch_size=32
 
+dataloader = DataLoader(
+            train_dataset,
+            sampler = RandomSampler(train_dataset),
+            batch_size = batch_size)
+#%%
+pickle.dump(dataloader,open(chemin_d+'dataloader.pickle','wb'))
+pickle.dump(train_dataset,open(chemin_d+'train.pickle','wb'))
+pickle.dump(validation_dataset,open(chemin_d+'validation.pickle','wb'))
 
+#%%
+device = torch.device("cpu")
+training_stats = []
+epochs=3
+summa=Summarizer(device='cpu')
+
+# topvec=summa(x=torch.tensor(train_input_ids[0:3]),
+#             mask=torch.tensor(train_mask[0:3]),
+#             clss=clss[0:3],
+#             mask_cls=torch.as_tensor([list(train_mask_cls[i]) for i in range(3)]),
+#             output=train_output[:3])
+
+# Boucle d'entrainement
+for epoch in range(0, epochs):
+     
+    print("")
+    print(f'########## Epoch {epoch+1} / {epochs} ##########')
+    print('Training...')
+ 
+ 
+    # On initialise la loss pour cette epoque
+    total_train_loss = 0
+ 
+    # On met le modele en mode 'training'
+    # Dans ce mode certaines couches du modele agissent differement
+    summa.train()
+ 
+    # Pour chaque batch
+    for step, batch in enumerate(dataloader):
+ 
+        # On fait un print chaque 40 batchs
+        if step % 40 == 0 and not step == 0:
+            print(f'  Batch {step}  of {len(train_dataloader)}.')
+         
+        # On recupere les donnees du batch
+        input_id = batch[0].to(device)
+        mask = batch[1].to(device)
+        clss = batch[2].to(device)
+        mask_cls=batch[3].to(device)
+        output=batch[4].to(device)
+ 
+        # On met le gradient a 0
+        summa.zero_grad()        
+ 
+        # On passe la donnee au model et on recupere la loss et le logits (sortie avant fonction d'activation)
+        loss, logits = summa(input_id,
+        mask,clss,mask_cls,output)
+ 
+        # On incremente la loss totale
+        # .item() donne la valeur numerique de la loss
+        total_train_loss += loss.item()
+ 
+        # Backpropagtion
+        loss.backward()
+ 
+        # On actualise les parametrer grace a l'optimizer
+        optimizer.step()
+ 
+    # On calcule la  loss moyenne sur toute l'epoque
+    avg_train_loss = total_train_loss / len(train_dataloader)   
+ 
+    print("")
+    print("  Average training loss: {0:.2f}".format(avg_train_loss))  
+     
+    # Enregistrement des stats de l'epoque
+    training_stats.append(
+        {
+            'epoch': epoch + 1,
+            'Training Loss': avg_train_loss,
+        }
+    )
+#%%
+print("Model saved!")
+torch.save(summa.state_dict(), chemin_d+"model_essai.pt")
 
 
 
