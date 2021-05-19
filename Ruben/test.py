@@ -76,3 +76,12 @@ prepared = pyLDAvis.prepare(topics)
 pyLDAvis.display(prepared)
 
 # %%
+
+enjeux = pd.read_csv('enjeux.csv',delimiter = ';')
+from unidecode import unidecode
+
+enjeux.applymap(unidecode)
+def itsplit(row,delimiter = ','):
+    return (row.split(delimiter))
+enjeux.Dictionnaire.apply(split,args = (','))
+# %%
