@@ -9,3 +9,6 @@ En mars, le projet est divisé en plusieurs parties :
 2. une autre sur l'extraction (pouvant être *automatique*) de sommaire de documents PDF
 3. enfin une autre sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*)
 
+Pour le moment, il existe trois dossiers :
+* **Pipeline** : qui correspond aux chemins d'exécutions des travaux ayant été exécutés sur Dataiku. Notamment, l'analyse des enjeux, la détection et l'extraction des sommaires, le découpage des documents; la détection des avis vides.
+* **Ruben** : tous les codes exploratoires 
