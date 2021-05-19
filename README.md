@@ -1,8 +1,9 @@
-# Projet de TLN français de l'Ecolab : sommaires détaillés, résumé automatique, similarité de documents
+# Projet de TLN français de l'Ecolab : sommaires détaillés, résumé automatique, similarité de documents (19/05/2021)
 
 Bienvenue dans le référentiel consacré au projet de l'Ecolab sur le Traitement du Langage Naturel (français).
 
-Vous pourrez trouver ici les codes finis et les codes exploratoires produits par l'équipe en charge du projet.
+Vous pourrez trouver ici les codes finis et les codes exploratoires produits par l'équipe en charge du projet. Tout le projet est écrit en Python (ou Jupyter).
+
 
 En mars, le projet est divisé en plusieurs parties : 
 1. une première partie sur la détection et l'extraction des sommaire de documents PDF, puis leur découpage;
@@ -33,3 +34,7 @@ Nous développons quatre approches différentes qui sont :
 ### 3.2 - Un peu de méthode
 Pour des explications plus précises, voir _Note technique_ dans Theo.
 ### 3.3 - Résultats
+
+**Contacts :**
+Ruben Partouche : ruben.partouche@student-cs.fr
+Théo Roudil-Valentin : theo.roudil-valentin@ensae.fr
