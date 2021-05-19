@@ -254,6 +254,7 @@ train_mask=dico_train['mask']
 clss=make_tensor_clss(dico_train['clss'])
 train_mask_cls=dico_train['mask_cls']
 train_output=dico_train['output']
+clss_index_train=[len(i) for i in dico_train['clss']]
 
 
 #%%
@@ -265,10 +266,10 @@ camem.config.hidden_size
 # T=camem(torch.tensor(train_input_ids[0:3]),attention_mask=torch.tensor(train_mask[0:3]))#,token_type_ids=torch.tensor(train_segs[0:3]))
 # T
 #%%
-print(T.last_hidden_state.shape) # nbre de docs * dim input (512) * 768
+# print(T.last_hidden_state.shape) # nbre de docs * dim input (512) * 768
 # il faudrait réduire 512 -> nbr de phrases du doc
 #comme ça on aurait dim_sortie_finale = nbr de docs * nbr de phrases * 1 (ou 2)
-T.pooler_output.shape # nbre de docs * 768
+# T.pooler_output.shape # nbre de docs * 768
 #%%
 import torch.nn as nn
 class Classifier(nn.Module):
@@ -286,7 +287,9 @@ class Classifier(nn.Module):
 def select_sent(phrase,clss,k=3):
     index_phrase=torch.topk(phrase,k)[1]
     pred_phrase=torch.zeros(clss.shape)
-    index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) for i in range(len(index_phrase[k]))] for k in range(clss.shape[0])]
+    index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) 
+                for i in range(len(index_phrase[k])) if int(index_phrase[k][i]) in clss[k].tolist()]
+                 for k in range(clss.shape[0])]
     index_2=[[i] for i in range(clss.shape[0])]
     pred_phrase[index_2,index_1]=torch.ones(index_phrase.shape)
     return pred_phrase
@@ -330,11 +333,12 @@ class Summarizer(nn.Module):
 #%%
 summa=Summarizer(device='cpu')
 #%%
-topvec=summa(x=torch.tensor(train_input_ids[0:3]),
-            mask=torch.tensor(train_mask[0:3]),
-            clss=clss[0:3],
-            mask_cls=torch.as_tensor([list(train_mask_cls[i]) for i in range(3)]),
-            output=train_output[:3])
+x=3
+topvec=summa(x=torch.tensor(train_input_ids[0:x]),
+            mask=torch.tensor(train_mask[0:x]),
+            clss=clss[0:x],
+            mask_cls=torch.as_tensor([list(train_mask_cls[i]) for i in range(x)]),
+            output=train_output[:x])
 #%%
 
 multihead_attn = nn.MultiheadAttention(768, 8)
@@ -367,7 +371,7 @@ pred_phrase=torch.zeros(clss[:3].shape)
 
 
 index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) for i in range(len(index_phrase[k]))] for k in range(3)]
-#%%
+
 index_2=[[i] for i in range(3)] #clss.shape[0]
 pred_phrase[index_2,index_1]=torch.ones(index_phrase.shape)
 pred_phrase
@@ -380,7 +384,20 @@ score_1=[(a[i][1][1])/3 for i in range(len(pred_phrase))]
 print(score_1)
 print("Au total il y a ",round(np.mean(score_total),2),"bonnes prédictions,\n",np.sum(score_1),"bonnes phrases sont prédites")
 #%%
-tes
+# torch.nn.functional.binary_cross_entropy(
+#     topvec[1][0],
+#     train_output[0])
+# pred_phrase[0],train_output[0])
+perte=torch.nn.L1Loss()
+# perte(torch.repeat_interleave(torch.tensor(0.),torch.tensor(512)),torch.repeat_interleave(torch.tensor(0.),torch.tensor(512)))
+perte(pred_phrase,train_output[:3])
+
+#%%
+def Loss(x):
+    c=np.mean([i-1 for i in x])
+    return c
+
+Loss(score_1)
 #%%
 train_dataset = TensorDataset(
     torch.tensor(train_input_ids),
