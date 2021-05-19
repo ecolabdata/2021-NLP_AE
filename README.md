@@ -4,6 +4,7 @@ Bienvenue dans le référentiel consacré au projet de l'Ecolab sur le Traitemen
 
 Vous pourrez trouver ici les codes finis et les codes exploratoires produits par l'équipe en charge du projet. Tout le projet est écrit en Python (ou Jupyter).
 
+## Objectif : produire des outils, via du Machine Learning et du Natural Language Processing, pour aider les auditeurs qui élaborent les avis sur les études d'impact environnemental.
 
 En mars, le projet est divisé en plusieurs parties : 
 1. une première partie sur la détection et l'extraction des sommaire de documents PDF, puis leur découpage;
