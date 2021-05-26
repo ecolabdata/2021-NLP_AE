@@ -18,6 +18,8 @@ Pour le moment, il existe trois dossiers :
 
 Ces codes exploratoires sont parfois flous pour des personnes extérieures au projet, mais cela est normal. Les codes finaux seront mis dans **Pipeline** et expliqués par des documents et par des précisions dans le code lui-même.
 
+Pour setup le projet, il faut exécuter le script setup.py depuis la racine du projet (2021-NLP_AE) qui va aussi chercher les dernières données (environ 10Go) sur le disque partagé du SRI (le renommer en K si ce n'est pas le cas pour votre ordinateur). 
+
 ## 1 - Détection et extraction du sommaire
 ### 1.1 - Construction de la base HTML
 ### 1.2 - Création des variables (feature engineering)
@@ -25,6 +27,7 @@ Ces codes exploratoires sont parfois flous pour des personnes extérieures au pr
 ### 1.4 - Extraction et découpage
 
 ## 2 - Traitement et analyse des enjeux
+**Objectif** : identifier les enjeux présent dans un texte de longueur variable (idéalement le plus court possible)
 ### 2.1 -
 
 ## 3 - Résumé automatique de sections
