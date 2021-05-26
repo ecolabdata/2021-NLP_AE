@@ -2,33 +2,31 @@
 # coding: utf-8
 
 # In[ ]:
+#Root : 2021-NLP_AE. Dossier Data avec toutes les bases
 
-
-
-import dataiku
 import pandas as pd, numpy as np
-from dataiku import pandasutils as pdu
 import os
 import codecs
-# Read recipe inputs
-avis_txt_projets_env = dataiku.Folder("YoeTW9Sf")
-path = dataiku.Folder("YoeTW9Sf").get_path()
-avis_txt_projets_env_info = avis_txt_projets_env.get_info()
+# Read recipe inputs£
+path = "Data\Avis_txt\\"
+listfiles = os.listdir(path)
 
 
 # In[ ]:
-
+import io
 
 ids = []
 texts = []
-for file in avis_txt_projets_env.list_paths_in_partition():
+for file in listfiles:
+    if file[-3:] != 'txt':
+        pass
     id = ''
     for car in file:
         if car in '0123456789':
             id += car
     ids.append(id)
-    with codecs.open(path+file) as f:
-        data = f.read()
+    with open(path+file,'rb') as f:
+        data = f.read().decode('utf-8','ignore')
         texts.append(data)
 
 
@@ -80,15 +78,16 @@ base_id_avistxt_df['hasAA'] = sortie
 base_id_avistxt_df['hasAO'] = sortie2
 base_id_avistxt_df['hasDI'] = sortie3
 base_id_avistxt_df['hasPO'] = sortie4
-np.sum(sortie)
 
-base_id_avistxt_df.sort_values('len').head(20)
 
 
 # In[ ]:
+import pickle
 
-
+path = "Data\Workinprogress\\"
 # Write recipe outputs
-base_id_avistxt = dataiku.Dataset("base_id_avistxt")
-base_id_avistxt.write_with_schema(base_id_avistxt_df)
+base_id_avistxt = pickle.dump(base_id_avistxt_df,open(path+"base_id_avistxt.pickle",'wb'))
 
+
+
+# %%

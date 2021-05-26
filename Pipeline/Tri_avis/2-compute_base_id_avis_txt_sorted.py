@@ -5,15 +5,12 @@
 
 # In[ ]:
 
-
-
-import dataiku
+import pickle
 import pandas as pd, numpy as np
-from dataiku import pandasutils as pdu
-
 # Read recipe inputs
-base_id_avistxt = dataiku.Dataset("base_id_avistxt")
-base_id_avistxt_df = base_id_avistxt.get_dataframe()
+path = "Data\Workinprogress\\"
+
+base_id_avistxt_df = pickle.load(open(path+"base_id_avistxt.pickle",'rb'))
 
 
 # In[ ]:
@@ -190,7 +187,8 @@ n_noise_ = list(labels).count(-1)
 print('Estimated number of clusters: %d' % n_clusters_)
 print('Estimated number of noise points: %d' % n_noise_)
 
-base_id_avistxt_df.sort_values('len').head(200)
+
+base_id_avistxt_df.sort_values('len').head(500)
 
 
 # ## 1.4 Calcul du score de clustering
@@ -198,22 +196,33 @@ base_id_avistxt_df.sort_values('len').head(200)
 # Maintenant qu'on a les résultats de 3 clustering, on calcule un score de 0 (avis rendu) à 3 (avis non rendu). Les 0 et 3 constituent le set d'entrainement du classifieur car on considère que le clustering a bien fait son travail. Les autres sont un set de test.
 # 
 # L'interprétation faite des résultats est donnée dans le tableau suivant. On va transformer les colonnes pour que les résultats coincident.
-Kres	Kres2	DBSCAN
-  1	      0 	  1     Avis
-  2	      2	      2 	Bruit
-  0	      1	      0	    Non Avis
+#Kres	Kres2	DBSCAN
+#  0	      2 	  1     Avis
+#  2	      0	      2 	Bruit
+#  1	      1	      0	    Non Avis
 # In[ ]:
 
+#Bruit vers 3
+base_id_avistxt_df.Kres.replace(2,3,inplace = True )
+base_id_avistxt_df.Kres2.replace(0,3,inplace=True)
+base_id_avistxt_df.DBSCAN.replace(2,3,inplace = True )
 
-base_id_avistxt_df.replace(2,3,inplace = True )
+base_id_avistxt_df.sort_values('len').head(500)
+#%%
 
-base_id_avistxt_df.Kres.replace(0,2,inplace = True )
-base_id_avistxt_df.Kres.replace(1,0,inplace = True )
-
-base_id_avistxt_df.Kres2.replace(1,2,inplace = True )
-
-base_id_avistxt_df.DBSCAN.replace(0,2,inplace = True )
+#Avis vers 0
+base_id_avistxt_df.Kres2.replace(2,0,inplace=True)
+base_id_avistxt_df.DBSCAN.replace(0,4,inplace = True )
 base_id_avistxt_df.DBSCAN.replace(1,0,inplace = True )
+base_id_avistxt_df.sort_values('len').head(500)
+
+
+#%%
+#Non avis vers 2
+base_id_avistxt_df.Kres2.replace(1,2,inplace=True)
+base_id_avistxt_df.Kres.replace(1,2,inplace = True )
+base_id_avistxt_df.DBSCAN.replace(4,2,inplace = True )
+
 
 base_id_avistxt_df.replace(3,1,inplace = True )
 
@@ -224,20 +233,18 @@ base_id_avistxt_df.sort_values('len').head(200)
 
 
 #Calcul du score
-base_id_avistxt_df['Score'] = (base_id_avistxt_df.Kres+base_id_avistxt_df.Kres2+base_id_avistxt_df.target+base_id_avistxt_df.DBSCAN)
+base_id_avistxt_df['Score'] = (base_id_avistxt_df.Kres+base_id_avistxt_df.Kres2+base_id_avistxt_df.target+base_id_avistxt_df.DBSCAN)/6
 
 #Constituion de la BDD des valeurs sûres :
 #Non avis certains
-df1 = base_id_avistxt_df[base_id_avistxt_df['Score']==7]
+df1 = base_id_avistxt_df[base_id_avistxt_df['Score']==1]
 #Avis certains
 df0 = base_id_avistxt_df[base_id_avistxt_df['Score']==0]
 df_train = pd.concat([df1,df0])
-df_train = df_train.sample(frac=1)
-df_train['Score'] = df_train['Score']/7
 
 #Constitution de la BDD des valeurs incertaines/test
 
-df_test = base_id_avistxt_df[(base_id_avistxt_df['Score']>0)& (base_id_avistxt_df['Score']<7)]
+df_test = base_id_avistxt_df[(base_id_avistxt_df['Score']>0)& (base_id_avistxt_df['Score']<1)]
 
 
 # ## 1.5 Clustering sur clustering
@@ -252,7 +259,7 @@ df_test = base_id_avistxt_df[(base_id_avistxt_df['Score']>0)& (base_id_avistxt_d
 
 
 #Séparation des matrices de features/vecteur target. On classifie sur les indicatrices + la longueur normalisée
-X_train,y_train = df_train.iloc[:,3:7],df_train.Score
+X_train,y_train = df_train.iloc[:,3:7],df_train.Score.astype(int)
 X_test,y_test = df_test.iloc[:,3:7],df_test.Score
 
 from sklearn.ensemble import RandomForestClassifier
@@ -337,6 +344,7 @@ print("\nLongueur max :", "\t \t Longueur min :"
 
 
 # Write recipe outputs
-base_id_avis_txt_sorted = dataiku.Dataset("base_id_avis_txt_sorted")
-base_id_avis_txt_sorted.write_with_schema(base_id_avis_txt_sorted_df)
+base_id_avis_txt_sorted = pickle.dump(base_id_avis_txt_sorted_df,open(path+"base_id_avis_txt_sorted",'wb'))
 
+
+# %%
