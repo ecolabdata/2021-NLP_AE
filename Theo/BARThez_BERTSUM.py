@@ -20,6 +20,7 @@ from functools import partial
 import time
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 #%%
 ##### On crée le fichier ligne par ligne article+résumé pour l'entraînement du tokenizer
 ###################
@@ -198,6 +199,10 @@ print("Chaque vecteur est de dimension",len(articles_encodees[0][0][0]),"comme l
 #%%
 pickle.dump(articles_encodees,open(chemin_d+"OrangeSum_articles_ALL.pickle",'wb'))
 #%%
+article_encodees=pickle.load(open(chemin_d+"OrangeSum_articles_ALL.pickle",'rb'))
+
+
+#%%
 ##### On crée nos tensors et la data loader pour la boucle d'entraînement
 ###################
 
@@ -248,15 +253,22 @@ dico_test={
 pickle.dump(dico_test,open(chemin_d+'dico_test.pickle','wb'))
 #%%
 dico_train=pickle.load(open(chemin_d+'dico_train.pickle','rb'))
-#%%
+
 train_input_ids=dico_train['input']
 train_mask=dico_train['mask']
 clss=make_tensor_clss(dico_train['clss'])
 train_mask_cls=dico_train['mask_cls']
 train_output=dico_train['output']
 clss_index_train=[len(i) for i in dico_train['clss']]
+#%%
+dico_test=pickle.load(open(chemin_d+'dico_test.pickle','rb'))
 
-
+test_input_ids=dico_test['input']
+test_mask=dico_test['mask']
+clss_test=dico_test['clss']
+test_mask_cls=dico_test['mask_cls']
+test_output=dico_test['output']
+clss_index_test=[len(i) for i in dico_test['clss']]
 #%%
 from transformers import CamembertModel,BertModel,RobertaModel
 camem=CamembertModel.from_pretrained("camembert-base")
@@ -289,7 +301,7 @@ def select_sent(phrase,clss,k=3):
     pred_phrase=torch.zeros(clss.shape)
     index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) 
                 for i in range(len(index_phrase[k])) if int(index_phrase[k][i]) in clss[k].tolist()]
-                 for k in range(clss.shape[0])]
+                 for k in range(3)]
     index_2=[[i] for i in range(clss.shape[0])]
     pred_phrase[index_2,index_1]=torch.ones(index_phrase.shape)
     return pred_phrase
@@ -315,7 +327,7 @@ class Summarizer(nn.Module):
         # self.score=confusion_output
         self.to(device)
 
-    def forward(self,x,mask, mask_cls,clss,output,k=3):#,segs):#, sentence_range=None): #segs, 
+    def forward(self,x,mask, mask_cls):#,clss,output,k=3):#,segs):#, sentence_range=None): #segs, 
         #x input_ids
         #Segs = Segment pour phrases (0 ou 1), marche pas dans un RoBERTa
         #clss index du début des phrases 
@@ -327,7 +339,7 @@ class Summarizer(nn.Module):
         # sents_vec = sents_vec * mask_cls[:, :, None].float()
         sent_scores = self.encoder(top_vec.last_hidden_state).squeeze(-1)#, mask_cls
         sent_scores_masked = torch.mul(sent_scores,mask_cls)
-        sent_scores_masked = self.select_sent(sent_scores_masked,clss,k=k)
+        #sent_scores_masked = self.select_sent(sent_scores_masked,clss,k=k)
         # score=self.score(sent_scores,output)
         return sent_scores_masked,sent_scores,top_vec.last_hidden_state#,score#, mask_cls
 #%%
@@ -336,9 +348,9 @@ summa=Summarizer(device='cpu')
 x=3
 topvec=summa(x=torch.tensor(train_input_ids[0:x]),
             mask=torch.tensor(train_mask[0:x]),
-            clss=clss[0:x],
-            mask_cls=torch.as_tensor([list(train_mask_cls[i]) for i in range(x)]),
-            output=train_output[:x])
+            # clss=clss[0:x],
+            mask_cls=torch.as_tensor([list(train_mask_cls[i]) for i in range(x)]))#,
+            # output=train_output[:x])
 #%%
 
 multihead_attn = nn.MultiheadAttention(768, 8)
@@ -346,13 +358,17 @@ query=topvec[2]
 key=topvec[2]
 value=topvec[2]
 attn_output, attn_output_weights = multihead_attn(query, key, value)
-
-
 #%%
-
+LN=nn.LayerNorm(torch.Size([512,768]))
+AON=LN(attn_output)
+AON.shape
+#%%
+#%%
 tens=torch.as_tensor([list(train_mask_cls[i]) for i in range(3)])
 phrase=torch.mul(topvec[0],tens)
-
+pred=select_sent(phrase,tens)
+pred
+#%%
 # torch.max(phrase).item()
 #phrase.argmax()
 index_phrase=torch.topk(phrase,3)[1]
@@ -368,10 +384,13 @@ pred_phrase=torch.zeros(clss[:3].shape)
 #Je propose d'être plus général, et de laisser le réseau prédire ce qu'il veut en récupérant différemment l'info
 #Par exemple, en prenant simplement les 3 max scores sur 512 et repérer la phrase à laquelle appartient le token
 #Ensuite simplement récupérer la phrase, et la suite reste la même 
+index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) 
+            for i in range(len(index_phrase[k]))]# if int(index_phrase[k][i]) in clss[k].tolist()]
+                for k in range(3)]
 
-
-index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) for i in range(len(index_phrase[k]))] for k in range(3)]
-
+# index_1=[[clss[k].tolist().index(int(index_phrase[k][i])) for i in range(len(index_phrase[k]))] for k in range(3)]
+index_1
+#%%
 index_2=[[i] for i in range(3)] #clss.shape[0]
 pred_phrase[index_2,index_1]=torch.ones(index_phrase.shape)
 pred_phrase
@@ -390,29 +409,52 @@ print("Au total il y a ",round(np.mean(score_total),2),"bonnes prédictions,\n",
 # pred_phrase[0],train_output[0])
 perte=torch.nn.L1Loss()
 # perte(torch.repeat_interleave(torch.tensor(0.),torch.tensor(512)),torch.repeat_interleave(torch.tensor(0.),torch.tensor(512)))
-perte(pred_phrase,train_output[:3])
+# soft=nn.Softmax()
+# top_soft=soft(topvec[0])
+# print(top_soft)
+perte(topvec[0],train_output[:3])
 
 #%%
-def Loss(x):
-    c=np.mean([i-1 for i in x])
-    return c
+train_dataset=pickle.load(open(chemin_d+'train.pickle','rb'))
 
-Loss(score_1)
+def make_output(mask_cls,output):
+    values_mask,ind_mask=mask_cls.topk(k=int(mask_cls.sum()))
+    out=torch.zeros(512)
+    values,ind=torch.topk(output,k=3)
+    ind=ind[[values!=0]]
+    ind_output=ind_mask.sort()[0][ind]
+    out[ind_output]=1
+    return out
+
+from joblib import Parallel, delayed
+import psutil
+
+cpu=psutil.cpu_count()
+
+output=[train_dataset[i][4] for i in range(len(train_dataset))]
+mask_cls=[train_dataset[i][3] for i in range(len(train_dataset))]
+
+output_new=Parallel(n_jobs=cpu)(delayed(make_output)(mask_,out_) for mask_,out_ in zip(mask_cls,output))
+output_=torch.as_tensor([i.numpy() for i in output_new])
+#%%
+output_new_test=Parallel(n_jobs=cpu)(delayed(make_output)(mask_,out_) for mask_,out_ in zip(test_mask_cls,test_output))
+#%%
+output_test=torch.as_tensor([i.numpy() for i in output_new_test])
 #%%
 train_dataset = TensorDataset(
     torch.tensor(train_input_ids),
     torch.tensor(train_mask),
-    train_clss,
+    clss,
     torch.as_tensor([list(train_mask_cls[i]) for i in range(len(train_mask_cls))]),
-    train_output)
+    output_)
 
 validation_dataset = TensorDataset(
     torch.tensor(test_input_ids),
     torch.tensor(test_mask),
-    test_clss,
+    clss_test,
     torch.as_tensor([list(test_mask_cls[i]) for i in range(len(test_mask_cls))]),
-    test_output)
-
+    output_test)
+#%%
 batch_size=32
 
 dataloader = DataLoader(
@@ -420,97 +462,15 @@ dataloader = DataLoader(
             sampler = RandomSampler(train_dataset),
             batch_size = batch_size)
 #%%
-pickle.dump(dataloader,open(chemin_d+'dataloader.pickle','wb'))
+# pickle.dump(dataloader,open(chemin_d+'dataloader.pickle','wb'))
 pickle.dump(train_dataset,open(chemin_d+'train.pickle','wb'))
 pickle.dump(validation_dataset,open(chemin_d+'validation.pickle','wb'))
 
 #%%
-device = torch.device("cpu")
-training_stats = []
-epochs=3
-summa=Summarizer(device='cpu')
+###########################################################################################
+#############  Observation des données de BERTSUM
+###########################################################################################
 
-# topvec=summa(x=torch.tensor(train_input_ids[0:3]),
-#             mask=torch.tensor(train_mask[0:3]),
-#             clss=clss[0:3],
-#             mask_cls=torch.as_tensor([list(train_mask_cls[i]) for i in range(3)]),
-#             output=train_output[:3])
-
-# Boucle d'entrainement
-for epoch in range(0, epochs):
-     
-    print("")
-    print(f'########## Epoch {epoch+1} / {epochs} ##########')
-    print('Training...')
- 
- 
-    # On initialise la loss pour cette epoque
-    total_train_loss = 0
- 
-    # On met le modele en mode 'training'
-    # Dans ce mode certaines couches du modele agissent differement
-    summa.train()
- 
-    # Pour chaque batch
-    for step, batch in enumerate(dataloader):
- 
-        # On fait un print chaque 40 batchs
-        if step % 40 == 0 and not step == 0:
-            print(f'  Batch {step}  of {len(train_dataloader)}.')
-         
-        # On recupere les donnees du batch
-        input_id = batch[0].to(device)
-        mask = batch[1].to(device)
-        clss = batch[2].to(device)
-        mask_cls=batch[3].to(device)
-        output=batch[4].to(device)
- 
-        # On met le gradient a 0
-        summa.zero_grad()        
- 
-        # On passe la donnee au model et on recupere la loss et le logits (sortie avant fonction d'activation)
-        loss, logits = summa(input_id,
-        mask,clss,mask_cls,output)
- 
-        # On incremente la loss totale
-        # .item() donne la valeur numerique de la loss
-        total_train_loss += loss.item()
- 
-        # Backpropagtion
-        loss.backward()
- 
-        # On actualise les parametrer grace a l'optimizer
-        optimizer.step()
- 
-    # On calcule la  loss moyenne sur toute l'epoque
-    avg_train_loss = total_train_loss / len(train_dataloader)   
- 
-    print("")
-    print("  Average training loss: {0:.2f}".format(avg_train_loss))  
-     
-    # Enregistrement des stats de l'epoque
-    training_stats.append(
-        {
-            'epoch': epoch + 1,
-            'Training Loss': avg_train_loss,
-        }
-    )
-#%%
-print("Model saved!")
-torch.save(summa.state_dict(), chemin_d+"model_essai.pt")
-
-
-
-
-
-
-
-
-
-
-
-
-#%%
 # filee=open(chemin_d+"cnndm.test.0.bert.pt",'r').read()
 filee=torch.load(chemin_d+"cnndm.train.0.bert.pt")
 #%%
@@ -548,6 +508,21 @@ a.hist(nphrase,density=True)
 # a.set(xlabel="nombre de mots",ylabel='quantité de phrases',
 #       title='Distribution du nombre de tokens')
 # plt.legend(['Tokens','mots'])
+#%%
+####################################
+##### Quelques stats sur nos phrases
+####################################
+mask_cls=test_mask_cls+train_mask_cls
+longueur_phrase=[int(mask_cls[i].sum()) for i in range(len(mask_cls))]
+print("Nombre de phrases :\nMoyenne :",
+round(np.mean(longueur_phrase),2),"\nEcart-type :",round(np.std(longueur_phrase),2),
+"\nMaximum :",np.max(longueur_phrase),"\nMinimum :",np.min(longueur_phrase),"\nMédiane :",np.median(longueur_phrase))
+#%%
+import matplotlib.pyplot as plt
+fig,ax=plt.subplots(figsize=(18,10))
+ax.hist(longueur_phrase,density=True,bins=50)
+
+
 #%%
 ###############################
 ##### CREATION DU MODELE (TÊTE)
