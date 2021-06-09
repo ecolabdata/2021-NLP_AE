@@ -11,17 +11,15 @@ import os
 
 path = "Data\Thesaurus_csv\\"
 versions = os.listdir(path)
-version = 1
+version = 0
 versions[version]
 
 
 # In[99]:
 
 
-enjeux = pd.read_csv(open(path+versions[version]),encoding = 'utf-8',delimiter=';')
+enjeux = pd.read_csv(open(path+versions[version],encoding = 'utf-8'),delimiter=';')
 
-
-# In[100]:
 
 
 # In[101]:
@@ -53,6 +51,8 @@ final.Dictionnaire
 
 
 import pickle
-path_clean = dataiku.Folder('ywCWAV6b').get_path()
-pickle.dump(enjeux,open(path_clean+'/Thesaurus'+str(version)+'.pickle','wb'))
+path_clean = "Data\Thesaurus_csv"
+pickle.dump(final,open(path_clean+'\Thesaurus'+str(version)+'.pickle','wb'))
 
+
+# %%

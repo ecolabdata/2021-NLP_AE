@@ -11,7 +11,7 @@ while fini == False:
     #On s'assure qu'on est a la bonne racine dans la console
     CURR_DIR = os.getcwd().split('\\')[-1]
     if CURR_DIR != '2021-NLP_AE':
-        print("ERREUR : La racine courante n'est pas 2021-NLP_AE")
+        print("ERREUR : Le fichier courant n'est pas 2021-NLP_AE")
         break
     print('\n')
     print('Création des dossiers locaux...')
@@ -50,6 +50,8 @@ while fini == False:
             for data in tqdm.tqdm(dataRestant):
                 shutil.copyfile(datapath+file+'\\'+data,CURR_DIR+file+'\\'+data)
 
+    print('\n')
+    print('Vous pouvez commencer à vous amuser :-)')
     fini = True
    
 
