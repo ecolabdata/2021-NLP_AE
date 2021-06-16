@@ -16,17 +16,25 @@ import sentencepiece as spm
 import psutil
 from tqdm import tqdm
 import pickle
-
+import os
 # Tout d'abord donc il nous faut des phrases appartennant à un document (article, paragraphe etc...).
 # Pour le moment, on va télécharger les articles d'OrangeSum, on va essayer le TextRank pour voir si on retrouve celles (les phrases) qui ont
 # été labellisées comme proche du résumé fourni (abstractif).
 
-chemin_d="C:/Users/theo.roudil-valentin/Documents/OrangeSum/"
+os.chdir("C:/Users/theo.roudil-valentin/Documents/Resume/MLSUM/")
+from fats import Make_Extractive
+cpu=psutil.cpu_count()
 #%%
-articles=pickle.load(open(chemin_d+'OrangeSum_articles_phrases_clean.pickle','rb'))
-print(len(articles))
-headings=pickle.load(open(chemin_d+'OrangeSum_headings_phrases_clean.pickle','rb'))
-print(len(headings))
+Art=[]
+Sum=[]
+for k in range(4):
+    articles=pickle.load(open('text_clean_train_'+str(k+1)+'.pickle','rb'))
+    Art+=articles
+    print(len(articles))
+    headings=pickle.load(open('summary_clean_train_'+str(k+1)+'.pickle','rb'))
+    print(len(headings))
+    Sum+=headings
+print(len(Sum),len(Art))
 # %%
 ######################################
 #####   1. Représentation vectorielle 
@@ -40,11 +48,16 @@ print(len(headings))
 # On va tester deux Embedding différentes : CamemBERT et Word2Vec
 # D'autres sont possibles évidemment.
 
+#On va entrainer un tokenizer :
+ME=Make_Extractive(cpu=cpu)
+tok=ME.make_tokenizer(Art,12000,'MLSUM_tokenizer',name='MLSUM_tokenizer')
+
+
 # On a déjà un Tokenizer entraîné, donc on va le réutiliser :
 #On rentre notre SentencePiece model dans le tokenizer Camembert
-
+#%%
 from transformers import CamembertTokenizer
-tokenizer=CamembertTokenizer(chemin_d+'FUES.model')
+tok=CamembertTokenizer('MLSUM_tokenizer.model')
 # %%
 # On charge le modèle BERT 
 from transformers import CamembertModel,BertModel,RobertaModel
@@ -52,30 +65,63 @@ camem=CamembertModel.from_pretrained("camembert-base")
 camem.config.hidden_size
 #%%
 camem.eval()
-encod=tokenizer(articles[0][0:1])
+encod=tok(articles[0][0:1])
 input_id=torch.tensor(encod['input_ids'])
 att_mask=torch.tensor(encod['attention_mask'])
 # %%
 embedding=camem(input_id,att_mask)
 # %%
-def emb_phrase(x,tok,cam):
-    encod=tok(x)
-    input_id=torch.tensor(encod['input_ids'])
-    att_mask=torch.tensor(encod['attention_mask'])
-    embedding=cam(input_id,att_mask)
-    embedding=embedding[0].mean(dim=1).squeeze(-2)
-    return embedding#.tolist()
+class Make_Embedding():
+    def __init__(self,tok=None,cpu=None) -> None:
+        super(Make_Embedding,self).__init__
+        self.tokenizer=tok
+        self.cpu=cpu
 
-cpu=psutil.cpu_count()
-print("Utilisation de ",cpu,"coeurs")
-emb_p=partial(emb_phrase,tok=tokenizer,cam=camem)
+    def make_token(self,sequence):
+        tokens=self.tokenizer(sequence)
+        input_ids=tokens['input_ids']
+        att_mask=tokens['attention_mask']
+        return input_ids,att_mask
+
+    def make_tokens(self,sequence):
+        tokens=Parallel(n_jobs=self.cpu)(delayed(self.make_token)(z) for z in sequence)
+        dico={}
+        dico['input_ids']=[tokens[i][0] for i in range(len(tokens))]
+        dico['attention_mask']=[tokens[i][1] for i in range(len(tokens))]
+        return dico
+
+    @staticmethod
+    def emb_phrase(input_id,att_mask,cam):
+        embeddings=[]
+        for i,a in zip(input_id,att_mask):
+            embedding=cam(torch.tensor(i).unsqueeze(1),torch.tensor(a).unsqueeze(1))
+            embeddings.append(embedding[0].mean(dim=1).squeeze(-2))
+        return embeddings
+    
+    def emb_phrases(self,input_ids,att_masks,cam):
+        for input_id,att_mask in zip(input_ids,att_masks):
+            embeddings=self.emb_phrase(input_id,att_mask,cam)
+        return embeddings
+#%%
+MEm=Make_Embedding(tok=tok,cpu=psutil.cpu_count())
 
 start=time.time()
-embedding_phrase=Parallel(n_jobs=cpu)(delayed(emb_p)([phrase]) for phrase in articles[0])
+tokens=MEm.make_tokens(articles)
 end=time.time()
-print("Durée de l'embedding d'un article :",round((end-start)/60,2),"minutes")
+print("Durée de la tokenization des articles :",round((end-start)/60,2),"minutes")
+pickle.dump(tokens,open('tokens.pickle','wb'))
+#%%
 
-embedding_phrase
+MEm=Make_Embedding()
+
+cpu=psutil.cpu_count()
+print("Utilisation de",cpu,"coeurs")
+emb_p=partial(MEm.emb_phrase,cam=camem)
+
+start=time.time()
+embedding_phrase=Parallel(n_jobs=cpu)(delayed(emb_p)(i,j) for i,j in zip(tokens['input_ids'][:10],tokens['attention_mask'][:10]))
+end=time.time()
+print("Durée de l'embedding de 10 articles :",round((end-start)/60,2),"minutes")
 # %%
 start=time.time()
 
@@ -90,9 +136,9 @@ print("Durée de l'embedding de tous les articles :",round((end-start)/60,2),"mi
 #embedding_section=torch.as_tensor(embedding_section)
 embedding_section
 # %%
-pickle.dump(embedding_section,open(chemin_d+'embedding_section_bert.pickle','wb'))
+pickle.dump(embedding_section,open('MLSUM_embedding_articles_train_1.pickle','wb'))
 #%%
-embedding_section=pickle.load(open(chemin_d+'embedding_section_bert.pickle','rb'))
+embedding_section=pickle.load(open('embedding_section_bert.pickle','rb'))
 # %%
 emb_len=[len(i) for i in embedding_section]
 import matplotlib.pyplot as plt
@@ -219,6 +265,8 @@ def TextRank(matrice_similarite,nx=nx):
     scores=nx.pagerank_numpy(graph)
     return scores
 
+# TextRank(matrix[0])
+#%%
 cpu=psutil.cpu_count()
 
 TextRank_scores_bert=Parallel(n_jobs=cpu)(delayed(TextRank)(mat) for mat in matrice_sim)
@@ -226,6 +274,57 @@ pickle.dump(TextRank_scores_bert,open(chemin_d+'OrangeSum_TextRank_scores_BERT.p
 
 TextRank_scores_w2v=Parallel(n_jobs=cpu)(delayed(TextRank)(mat) for mat in matrice_sim_w2v)
 pickle.dump(TextRank_scores_w2v,open(chemin_d+'OrangeSum_TextRank_scores_W2V.pickle','wb'))
+#%%
+matrix=pickle.load(open(chemin_d+'OrangeSum_similarity_matrix_W2V.pickle','rb'))
+#%%
+mat=matrix[0]
+un=torch.ones(mat.shape[0])
+wei=torch.div(un,mat.sum(dim=1))
+wei=torch.repeat_interleave(wei,mat.shape[0],dim=0).reshape(mat.shape)
+mat_div=torch.mul(mat,wei)
+score=mat_div@torch.ones(mat.shape[0])#torch.mul(mat_div,torch.ones(mat.shape[0]).unsqueeze(1))
+score#.sum(dim=1)
+#%%
+############# 3.2 - TextRank from scratch
+
+def WS(mat_sim,score,d=0.85):
+    un=torch.ones(mat_sim.shape[0])
+    weights=torch.div(un,mat_sim.sum(dim=1))
+    weights=torch.repeat_interleave(weights,mat_sim.shape[0],dim=0).reshape(mat_sim.shape)
+    weights=torch.mul(mat_sim,weights)
+    score=torch.mul(d,score)
+    score=torch.add((1-d),score)
+    return score
+
+WS(matrix[0],torch.rand(matrix[0].shape)).sum(dim=1)
+#%%
+def make_convergence(mat,score,epsilon=0.001):
+    # score_1=torch.ones(mat.shape[0])
+    score_1=WS(mat,score)
+    while torch.add(score_1,-score).sum()>epsilon:
+        print('encore')
+        score=score_1
+        score_1=WS(mat,score)
+    return score_1
+
+make_convergence(matrix[0],torch.rand(matrix[0].shape[0]))
+
+
+
+#%%
+vrai=[]
+for k in range(len(matrix[0])):
+    mat=list(matrix[0][k])
+    colonne=[matrix[0][i][k] for i in range(matrix[0].shape[0])]
+    print(np.sum(mat),np.sum(colonne))
+    vrai.append(np.sum(mat)==np.sum(colonne))
+np.sum(vrai)/len(matrix)
+# colonne
+
+
+
+
+
 
 # %%
 ######################################
