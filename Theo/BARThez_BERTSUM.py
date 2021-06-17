@@ -2,7 +2,7 @@
 ######### Création séquence pour BERT
 ####################################################################################################"
 #%% 
-chemin_d="C:/Users/theo.roudil-valentin/Documents/OrangeSum/"
+chemin_d="C:/Users/theo.roudil-valentin/Documents/Resume/OrangeSum/"
 import time
 import pickle
 from pathlib import Path
@@ -25,6 +25,10 @@ from tqdm import tqdm
 ##### On crée le fichier ligne par ligne article+résumé pour l'entraînement du tokenizer
 ###################
 texte_entier=pickle.load(open(chemin_d+"OrangeSum_texte_entier_clean.pickle",'rb'))
+# len(texte_entier),len(texte_entier[0]),len(texte_entier[0][0])
+type(texte_entier),type(texte_entier[0])
+
+#%%
 b=texte_entier[0]+'\n'
 for i in tqdm(range(len(texte_entier)-1)):
     b+=unidecode(texte_entier[i+1])+'\n'
@@ -51,13 +55,16 @@ tokenizer=CamembertTokenizer(chemin_d+'FUES.model')
 #### On charge les articles pour les avoir en format différent
 ##############################################################
 articles=pickle.load(open(chemin_d+'OrangeSum_articles_phrases_clean.pickle','rb'))
+print(type(articles),type(articles[0]),type(articles[0][0]))
 headings=pickle.load(open(chemin_d+'OrangeSum_headings_phrases_clean.pickle','rb'))
-
+#%%
 
 ##### On charge l'output qu'on a créé pour OrangeSum Extractive
 ##################################################################
 
 output=pickle.load(open(chemin_d+"Output_OrangeSum.pickle",'rb'))
+# output
+
 output=[i for i in output if len(i)>0]
 print(len(output))
 
@@ -73,7 +80,8 @@ for i in output:
     c=np.zeros(len(i))
     c[[list(i).index(k) for k in sorted(i)[-3:]]]=1
     output_.append(c)
-output_
+type(output_),type(output_[0])
+
 #%%
 #### Mask cls : un exemple
 ############################
@@ -175,8 +183,8 @@ def make_mask_cls(train_clss,dim=512):
         mask_cls_1[i]=1
     return mask_cls_1
 
-def make_tensor_clss(clss):
-    index=[512-len(i) for i in clss]
+def make_tensor_clss(clss,dim=512):
+    index=[dim-len(i) for i in clss]
     vect=[clss[i]+list(np.zeros(index[i])) for i in range(len(index))]
     clss=torch.as_tensor(vect)
     return clss
@@ -254,12 +262,13 @@ pickle.dump(dico_test,open(chemin_d+'dico_test.pickle','wb'))
 #%%
 dico_train=pickle.load(open(chemin_d+'dico_train.pickle','rb'))
 
-train_input_ids=dico_train['input']
-train_mask=dico_train['mask']
-clss=make_tensor_clss(dico_train['clss'])
-train_mask_cls=dico_train['mask_cls']
+# train_input_ids=dico_train['input']
+# train_mask=dico_train['mask']
+# clss=make_tensor_clss(dico_train['clss'])
+# train_mask_cls=dico_train['mask_cls']
 train_output=dico_train['output']
-clss_index_train=[len(i) for i in dico_train['clss']]
+# clss_index_train=[len(i) for i in dico_train['clss']]
+train_output
 #%%
 dico_test=pickle.load(open(chemin_d+'dico_test.pickle','rb'))
 

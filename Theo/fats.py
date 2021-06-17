@@ -8,6 +8,9 @@ from tqdm import tqdm
 import torch
 import pickle
 import warnings
+from time import time
+from transformers import CamembertModel,BertModel,RobertaModel,CamembertTokenizer
+import networkx as nx
 
 class Word_Cleaning():
       def __init__(self,n_jobs,sentence=False,threshold=False,seuil=None,lemma=False,seuil_carac=None):
@@ -102,89 +105,94 @@ class Word_Cleaning():
       
 
 def encod_articles(article,output,tokenizer,dim=512):
-    if len(article)==len(output):
-        encod_article=[]
-        encod_mask=[]
-        encod_phrase=[]
+   encod_article=[]
+   encod_mask=[]
+   encod_phrase=[]
 
-        segs=[]
-        encod_segs=[]
+   segs=[]
+   encod_segs=[]
 
-        clss_=[0]
-        encod_clss=[]
+   clss_=[0]
+   encod_clss=[]
 
-        out=[]
-        output_=[]
+   out=[]
+   output_=[]
+   try:
+      if len(article)==len(output):
 
-        # On prend chaque phrase dans l'article considéré
-        for phrase in article:
-            #On encode la phrase en dimension libre (nbr de tokens)
-            encod=tokenizer(phrase)
-            encod=encod['input_ids'] #On prend le vecteur des ids
 
-            #Tant qu'on peut additionner les phrases sans dépasser 512 on fait ça :
-            if (len(encod_phrase)+len(encod))<dim:        
-                encod_phrase=encod_phrase+encod #On ajoute la nouvelle phrase aux précédentes
-                #Pour avoir les phrases les unes après les autres séparées par les bons tokens
-                #On crée le vecteur de segments
-                if (article.index(phrase)%2==0): #Si la phrase est d'index paire
-                    seg=list(np.repeat(0,len(encod))) #On lui associe nombre de tokens fois des zéros
-                else:
-                    seg=list(np.repeat(1,len(encod))) #Sinon des 1 
-                segs=segs+seg #On ajoute pour que le vecteur de segment suive le vecteur des tokens
-                clss=len(encod) 
-                if article.index(phrase)!=(len(article)-1):
-                    clss_=clss_+[clss_[-1]+clss] #Via ce vecteur, on veut garder la trace des premiers tokens de chaque phrase
-                #Du coup on prend le token 0, puis le premier token de chaque phrase, donc pour cela
-                #on ajoute la longueur des nouvelles phrases (en tokens)
-                out=out+[output[article.index(phrase)]]
+         # On prend chaque phrase dans l'article considéré
+         for phrase in article:
+               #On encode la phrase en dimension libre (nbr de tokens)
+               encod=tokenizer(phrase)
+               encod=encod['input_ids'] #On prend le vecteur des ids
 
-            else: #Si la dimension dépasse 512, on s'arrête là pour le moment
-                index=dim-len(encod_phrase) #On prend la dim qui sépare de 512
-                
-                segs=segs+list(np.repeat(abs(segs[-1]-1),index)) #On rajoute les segments manquants pour avoir 512 du chiffre opposé du dernier 
-                encod_segs.append(segs) #On stock le segment des phrases considérées
-                segs=list(np.repeat(0,len(encod)))
-                #Pour l'attention_mask on met des 1 pour le nombre de vrais tokens, 0 sinon 
-                attention_mask=list(np.repeat(1,len(encod_phrase)))+list(np.repeat(0,index))
-                encod_mask.append(attention_mask) #Idem on stock
-                #On rajoute des 1 sur les places manquantes pour avoir dim=512
-                #1 étant le token de remplissage associé à rien, qui va disparaitre via l'attention_mask de toute façon
-                encod_phrase=encod_phrase+list(np.repeat(1,index))
-                encod_article.append(encod_phrase)
-                encod_phrase=encod #On a stocké le vecteur qui allait être trop grand (>512), donc maintenant
-                #On peut repartir avec la nouvelle phrase (encod donc)
+               #Tant qu'on peut additionner les phrases sans dépasser 512 on fait ça :
+               if (len(encod_phrase)+len(encod))<dim:        
+                  encod_phrase=encod_phrase+encod #On ajoute la nouvelle phrase aux précédentes
+                  #Pour avoir les phrases les unes après les autres séparées par les bons tokens
+                  #On crée le vecteur de segments
+                  if (article.index(phrase)%2==0): #Si la phrase est d'index paire
+                     seg=list(np.repeat(0,len(encod))) #On lui associe nombre de tokens fois des zéros
+                  else:
+                     seg=list(np.repeat(1,len(encod))) #Sinon des 1 
+                  segs=segs+seg #On ajoute pour que le vecteur de segment suive le vecteur des tokens
+                  clss=len(encod) 
+                  if article.index(phrase)!=(len(article)-1):
+                     clss_=clss_+[clss_[-1]+clss] #Via ce vecteur, on veut garder la trace des premiers tokens de chaque phrase
+                  #Du coup on prend le token 0, puis le premier token de chaque phrase, donc pour cela
+                  #on ajoute la longueur des nouvelles phrases (en tokens)
+                  out=out+[output[article.index(phrase)]]
 
-                encod_clss.append(clss_)
-                clss_=[0] #On réinitialise 
+               else: #Si la dimension dépasse 512, on s'arrête là pour le moment
+                  index=dim-len(encod_phrase) #On prend la dim qui sépare de 512
+                  
+                  segs=segs+list(np.repeat(abs(segs[-1]-1),index)) #On rajoute les segments manquants pour avoir 512 du chiffre opposé du dernier 
+                  encod_segs.append(segs) #On stock le segment des phrases considérées
+                  segs=list(np.repeat(0,len(encod)))
+                  #Pour l'attention_mask on met des 1 pour le nombre de vrais tokens, 0 sinon 
+                  attention_mask=list(np.repeat(1,len(encod_phrase)))+list(np.repeat(0,index))
+                  encod_mask.append(attention_mask) #Idem on stock
+                  #On rajoute des 1 sur les places manquantes pour avoir dim=512
+                  #1 étant le token de remplissage associé à rien, qui va disparaitre via l'attention_mask de toute façon
+                  encod_phrase=encod_phrase+list(np.repeat(1,index))
+                  encod_article.append(encod_phrase)
+                  encod_phrase=encod #On a stocké le vecteur qui allait être trop grand (>512), donc maintenant
+                  #On peut repartir avec la nouvelle phrase (encod donc)
 
-                output_.append(out)
-                out=[output[article.index(phrase)]]
+                  encod_clss.append(clss_)
+                  clss_=[0] #On réinitialise 
 
-        #Ensuite une fois qu'on a terminé de passer en revue toutes les phrases de l'article
-        #on va stocker les derniers vecteurs, donc
-        #le seul si on a jamais dépassé dim 512
-        # le dernier si on a déjà dû en stocker quelqu'uns
-        index=dim-len(encod_phrase)
-        # try:
-        segs=segs+list(np.repeat(abs(segs[-1]-1),index))
-        encod_segs.append(segs)
-        # except:
-        #     segs=segs+list(np.repeat(0,index))
-        #     encod_segs.append(segs)
-            
-        attention_mask=list(np.repeat(1,len(encod_phrase)))+list(np.repeat(0,index))
-        encod_mask.append(attention_mask)
+                  output_.append(out)
+                  out=[output[article.index(phrase)]]
 
-        encod_phrase=encod_phrase+list(np.repeat(1,index))
-        encod_article.append(encod_phrase)
-        
-        encod_clss.append(clss_)
-        output_.append(out)
+         #Ensuite une fois qu'on a terminé de passer en revue toutes les phrases de l'article
+         #on va stocker les derniers vecteurs, donc
+         #le seul si on a jamais dépassé dim 512
+         # le dernier si on a déjà dû en stocker quelqu'uns
+         index=dim-len(encod_phrase)
+         # try:
+         segs=segs+list(np.repeat(abs(segs[-1]-1),index))
+         encod_segs.append(segs)
+         # except:
+         #     segs=segs+list(np.repeat(0,index))
+         #     encod_segs.append(segs)
+               
+         attention_mask=list(np.repeat(1,len(encod_phrase)))+list(np.repeat(0,index))
+         encod_mask.append(attention_mask)
 
-        return encod_article,encod_mask,encod_segs,encod_clss,output_
-    else:
-        raise ValueError("Attention ! La dimension de l'article et de l'ouput sont différentes !")
+         encod_phrase=encod_phrase+list(np.repeat(1,index))
+         encod_article.append(encod_phrase)
+         
+         encod_clss.append(clss_)
+         output_.append(out)
+
+         return encod_article,encod_mask,encod_segs,encod_clss,output_
+      else:
+         raise ValueError("Attention ! La dimension de l'article et de l'ouput sont différentes !")
+   except:
+      return encod_article,encod_mask,encod_segs,encod_clss,output_
+
 
 
 
@@ -206,49 +214,105 @@ class Make_Extractive():
         @documents : une liste de documents, qui sont une liste de phrases
         '''
         sentences=[]
-        for i in documents:
-            for z in i:
-                if len(z.split())>0:
-                    sentences.append(z.split())
+        #for i in documents:
+        for z in documents:
+            if len(z.split())>0:
+               sentences.append(z.split())
         return sentences
+    
+    @staticmethod
+    def make_splitting(sequence,vocab=None):
+       if vocab==None:
+         sequence=[s.split() for s in sequence]
+       else:
+         sequence=[s.split() for s in sequence]
+         sequence=[[i for i in s if i in vocab] for s in sequence]
+       return sequence
+    
+    def make_W2V(self,docs):
+      sentence=Parallel(n_jobs=self.cpu)(delayed(self.make_w2v_sentences)(d) for d in docs)
+      import gensim
+      try:
+         W2V=gensim.models.Word2Vec(size=self.dim,window=self.fenetre,min_count=self.minimum)
+      except:
+         W2V=gensim.models.Word2Vec(vector_size=self.dim,window=self.fenetre,min_count=self.minimum)
+      W2V.build_vocab(sentence)
+      print("Démarrage de l'entraînement du modèle Word2Vec.")
+      start=time()
+      W2V.train(sentence,total_examples=W2V.corpus_count,epochs=self.epochs)
+      end=time()
+      print("Le modèle W2V est désormais entraîné et cela a pris :",round((end-start)/60,2),"minutes.")
+      return W2V
 
-    def make_output(self,docs,summary,W2V=None):
-       assert len(docs)==len(summary)
 
-       sentence=self.make_w2v_sentences(docs)
-       
+    def remove_empty(text):
+       while '' in text:
+          text.remove('')
+       return text
+
+    def make_output(self,text,summary,W2V=None,verbose=0):
+       assert len(text)==len(summary)
        if W2V==None:
-         import gensim
-         try:
-            W2V=gensim.models.Word2Vec(size=self.dim,window=self.fenetre,min_count=self.minimum)
-         except:
-            W2V=gensim.models.Word2Vec(vector_size=self.dim,window=self.fenetre,min_count=self.minimum)
-         W2V.build_vocab(sentence)
-         W2V.train(sentence,total_examples=W2V.corpus_count,epochs=self.epochs)
-       
-       text=[[i.split() for i in s] for s in docs]
-       try:
-          vocab=list(W2V.wv.vocab.keys())
-       except:
-          vocab=list(set(W2V.wv.key_to_index))
+          return_W2V=True
+          W2V=self.make_W2V(text)
+          try:
+            vocab=list(W2V.wv.vocab.keys())
+          except:
+            vocab=list(set(W2V.wv.key_to_index))
+          start=time()
+          text=Parallel(n_jobs=self.cpu)(delayed(self.make_splitting)(s) for s in docs)
+          #text=[[i.split() for i in s] for s in docs]
 
-       summary=[[i for i in s.split() if i in vocab] for s in summary]
+          summary=self.make_splitting(summary,vocab)
+          #  summary=[[i for i in s.split() if i in vocab] for s in summary]
+          end=time()
+          print("Le découpage des phrases a pris:",round((end-start)/60,2),"minutes.")
+       else:
+          return_W2V=False
+
+
        score=[]
        erreur=[]
-       for sent in tqdm(text):
-          score_=[]
-          for s in sent:
-             try:
-                score_.append(torch.stack(
-                     [self.cosim(torch.as_tensor(W2V[i]),torch.as_tensor(W2V[summary[text.index(sent)]]))
-                     for i in s]).mean())
-             except:
-                erreur.append([text.index(sent),sent.index(s)])
-                print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
-                continue
+       import gensim
+       if gensim.__version__<'4.0.0':
+         for sent in tqdm(text):
+            score_=[]
+            for s in sent:
+               try:
+                  score_.append(torch.stack(
+                        [self.cosim(torch.as_tensor(W2V[i]),torch.as_tensor(W2V[summary[text.index(sent)]]))
+                        for i in s]).mean())
+               except:
+                  erreur.append([text.index(sent),sent.index(s)])
+                  if verbose==1:
+                     print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
+                  continue
+            try:
+               score.append(torch.stack(score_))
+            except:
+               score.append(torch.Tensor())
 
-          score.append(torch.stack(score_))
-       return score,text,summary,W2V,erreur
+       else:
+         for sent in tqdm(text):
+            score_=[]
+            for s in sent:
+               try:
+                  score_.append(torch.stack(
+                        [self.cosim(torch.as_tensor(W2V.wv[i]),torch.as_tensor(W2V.wv[summary[text.index(sent)]]))
+                        for i in s]).mean())
+               except:
+                  erreur.append([text.index(sent),sent.index(s)])
+                  # print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
+                  continue
+            try:
+               score.append(torch.stack(score_))
+            except:
+               score.append(torch.Tensor())
+
+       if return_W2V:
+         return score,text,summary,erreur,W2V
+       else:
+         return score,text,summary,erreur
 
     @staticmethod
     def make_input_tokenizer(text,path,name):
@@ -353,7 +417,7 @@ class Make_Extractive():
          'mask_cls':train_mask_cls
        }
 
-       pickle.dump(dico_train,open(self.path+'/dico_train.pickle','wb'))
+      #  pickle.dump(dico_train,open(self.path+'/dico_train.pickle','wb'))
        
        if split<1:
          test=encoding[split_border:]
@@ -375,7 +439,100 @@ class Make_Extractive():
             'output':test_output,
             'mask_cls':test_mask_cls
          }
-         pickle.dump(dico_test,open(self.path+'/dico_test.pickle','wb'))
+         # pickle.dump(dico_test,open(self.path+'/dico_test.pickle','wb'))
          return dico_train,dico_test
 
        return dico_train
+
+class Make_Embedding():
+    def __init__(self,tok=None,cpu=psutil.cpu_count()) -> None:
+        super(Make_Embedding,self).__init__
+        self.tokenizer=tok
+        self.cpu=cpu
+
+    def make_token(self,sequence):
+        tokens=self.tokenizer(sequence)
+        input_ids=tokens['input_ids']
+        att_mask=tokens['attention_mask']
+        return input_ids,att_mask
+
+    def make_tokens(self,sequence):
+        tokens=Parallel(n_jobs=self.cpu)(delayed(self.make_token)(z) for z in sequence)
+        dico={}
+        dico['input_ids']=[tokens[i][0] for i in range(len(tokens))]
+        dico['attention_mask']=[tokens[i][1] for i in range(len(tokens))]
+        return dico
+
+    @staticmethod
+    def emb_phrase(input_id,att_mask,cam):
+        embeddings=[]
+        for i,a in zip(input_id,att_mask):
+            embedding=cam(torch.tensor(i).unsqueeze(1),torch.tensor(a).unsqueeze(1))
+            embeddings.append(embedding[0].mean(dim=0).squeeze(0))
+        return embeddings
+    
+    def emb_phrases(self,input_ids,att_masks,cam):
+        for input_id,att_mask in zip(input_ids,att_masks):
+            embeddings=self.emb_phrase(input_id,att_mask,cam)
+        return embeddings
+
+class TextRank():
+    def __init__(self):
+        super(TextRank,self).__init__
+        self.bert_embedding=Make_Embedding(tok=CamembertTokenizer('C:/Users/theo.roudil-valentin/Documents/Resume/MLSUM/MLSUM_tokenizer.model'),cpu=psutil.cpu_count())
+        self.camem=CamembertModel(CamembertConfig())
+    def make_embedding_bert(self,articles,camem=None):
+        if camem==None:
+            camem=self.camem
+        dico=self.bert_embedding.make_tokens(articles)
+        input_ids=dico['input_ids']
+        att_mask=dico['attention_mask']
+        embeddings=self.bert_embedding.emb_phrase(input_ids,att_mask,camem)
+        return embeddings,dico
+    
+    @staticmethod
+    def mat_sim(emb_2,cos_sim=torch.nn.CosineSimilarity(dim=0)):
+        ouais=[[cos_sim(emb,y) for y in emb_2] for emb in emb_2]
+        return torch.as_tensor(ouais)
+
+
+    @staticmethod
+    def get_emb_sentence(art,modele,di=0):
+        word=[modele[w] for w in art]
+        word=torch.as_tensor(word).mean(dim=di)
+        return word
+
+    def get_matrix_section(self,art,W2V):
+        mat=[self.get_emb_sentence(art[i],W2V) for i in range(len(art))]
+        mat=[torch.as_tensor(np.nan_to_num(i)) if np.isnan(i).sum()>0 else i for i in mat]
+        return mat
+
+    def make_embedding_W2V(self,article,W2V):
+        article_=[article[i].split() for i in range(len(article))]
+        mat=self.get_matrix_section(article_,W2V)
+        return mat
+    @staticmethod
+    def scores(matrice_similarite,nx=nx,k=3):
+        graph=nx.from_numpy_array(np.array(matrice_similarite))
+        scores=nx.pagerank_numpy(graph)
+        rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
+        rank=[s[0] for s in rank]
+        return rank
+    
+    def make_resume(self,article,type,W2V=None,k=3):
+        if type=='bert':
+            b,d=self.make_embedding_bert(article)
+            mb=self.mat_sim(b)
+            sb=self.scores(mb,k=k)
+            resume=[article[i] for i in sb]
+            return resume
+        elif type=='word2vec':
+            assert W2V!=None
+            w=TR.make_embedding_W2V(article,W2V)
+            mw=TR.mat_sim(w)
+            sw=TR.scores(mw,k=k)
+            resume=[article[i] for i in sw]
+            return resume
+        else:
+            raise ValueError("Attention, vous devez spécifier le type d'embedding que vous voulez utiliser, soit 'bert' soit 'word2vec'.")
+
