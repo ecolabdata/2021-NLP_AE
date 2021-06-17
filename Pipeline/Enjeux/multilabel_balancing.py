@@ -84,7 +84,7 @@ def get_index(df):
     index = index.union(sub_index)
   return list(index)
 
-def get_minority_instace(X, y):
+def get_minority_instance(X, y):
     """
     Give minority dataframe containing all the tail labels
     
@@ -153,13 +153,14 @@ if __name__=='main':
     main function to use the MLSMOTE
     """
     X, y = create_dataset()                     #Creating a Dataframe
-    X_sub, y_sub = get_minority_instace(X, y)   #Getting minority instance of that datframe
+    X_sub, y_sub = get_minority_instance(X, y)   #Getting minority instance of that datframe
     X_res,y_res =MLSMOTE(X_sub, y_sub, 100)     #Applying MLSMOTE to augment the dataframe
 
 #%%
-X,y = create_multilabel_dataset()
-tail = get_tail_label(y)
-X_sub, y_sub = get_minority_instace(X, y)
-X_res,y_res = MLSMOTE(X_sub,y_sub,100)   #Getting minority instance of that datframe
+if __name__=='main':
+    X,y = create_multilabel_dataset()
+    tail = get_tail_label(y)
+    X_sub, y_sub = get_minority_instance(X, y)
+    X_res,y_res = MLSMOTE(X_sub,y_sub,1000)   #Getting minority instance of that datframe
 
 #%%

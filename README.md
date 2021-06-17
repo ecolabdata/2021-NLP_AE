@@ -6,15 +6,17 @@ Vous pourrez trouver ici les codes finis et les codes exploratoires produits par
 
 ## Objectif : produire des outils, via du Machine Learning et du Natural Language Processing, pour aider les auditeurs qui élaborent les avis sur les études d'impact environnemental.
 
-En mars, le projet est divisé en plusieurs parties : 
+En juin, le projet est divisé en plusieurs parties :
 1. une première partie sur la détection et l'extraction des sommaire de documents PDF, puis leur découpage;
 2. une partie sur le traitement et l'analyse des enjeux (via du **topic modelling**);
-3. enfin une autre sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*).
+3. une partie sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*).
+4. une dernière partie sur un système de recommandation d'avis (fondé sur du **Deep Learning** et du **Collaborative Filtering** notamment )
 
-Pour le moment, il existe trois dossiers :
+Pour le moment, il existe quatres dossiers :
 * **Pipeline** : qui correspond aux chemins d'exécutions des travaux ayant été exécutés sur Dataiku. Notamment, l'analyse des enjeux, la détection et l'extraction des sommaires, le découpage des documents; la détection des avis vides.
-* **Ruben** : tous les codes _exploratoires_ de Ruben Partouche (@rbpart). 
+* **Ruben** : tous les codes _exploratoires_ de Ruben Partouche (@rbpart).
 * **Theo** : tous les codes _exploratoires_ de Théo Roudil-Valentin (@TheoRoudilValentin).
+* **Zakaria** : tous les codes _exploratoires_ de Zakaria Bekkar (@IIZCODEII).
 
 Ces codes exploratoires sont parfois flous pour des personnes extérieures au projet, mais cela est normal. Les codes finaux seront mis dans **Pipeline** et expliqués par des documents et par des précisions dans le code lui-même.
 
@@ -39,6 +41,14 @@ Nous développons quatre approches différentes qui sont :
 Pour des explications plus précises, voir _Note technique_ dans Theo.
 ### 3.3 - Résultats
 
+
+## 4 - Système de recommandation d'avis
+**Objectif** : formuler des recommandations d'avis correspondant à des études d'impacts similaires.
+
+
+
+
 **Contacts :**
 Ruben Partouche : ruben.partouche@student-cs.fr
 Théo Roudil-Valentin : theo.roudil-valentin@ensae.fr
+Zakaria Bekkar : zakaria.bekkar@ens-paris-saclay.fr
