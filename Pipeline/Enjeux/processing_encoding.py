@@ -1,8 +1,5 @@
 
-# In[353]:
-
-
-
+#%%
 import pandas as pd, numpy as np
 import pickle
 import unidecode
@@ -18,7 +15,9 @@ stop_words.extend(['avis','environnement','autorite','projet','etude','exploitat
 nlp = spacy.load('fr_core_news_sm')
 
 if __name__ == "__main__" :
-    docs_df = pickle.load(open("Data\Workinprogress\\base_id_avis_txt_sorted",'rb'))
+    docs_df = pickle.load(open("Data\Bagging_model\df_sections.pickle",'rb'))
+    docs_df.dropna(inplace = True)
+
     Thesaurus = pickle.load(open("Data\Thesaurus_csv\Thesaurus1.pickle",'rb'))
 
 #%%
@@ -47,9 +46,6 @@ def processing(text):
     string = re.sub(r'  ',' ',string)
     return(string)
 
-
-# In[359]:
-
 def clean_thesau(Thesaurus):
     """
     Thesaurus : dataframe avec deux colonnes "Enjeux" et "Dictionnaire"
@@ -66,15 +62,27 @@ def clean_thesau(Thesaurus):
     thesau_df = pd.DataFrame({'Enjeux': enjeux_list,'Dictionnaire' : thesau_list})
     return(thesau_df)
 
+#%%
 if __name__ == "__main__" :
-    Thesaurus = clean_thesau(Thesaurus)
-    pickle.dump(Thesaurus,open("Data\Thesaurus_csv\\Thesaurus1_clean.pickle",'wb'))
+    correct = [100689,100707,102316,106168,110277,114799,118071,120638]
+    docs_df_correct = docs_df[docs_df.num_etude.isin(correct)]
+    docs_df_correct = docs_df_correct[docs_df_correct.section_clean_1.str.len()>50]
+    docs_df_correct = docs_df_correct[docs_df_correct.section_clean_1.str.len()<20000]
+
+    lenee =docs_df_correct.section_clean_1.str.len().tolist()
+    lenee.sort()
+    import seaborn as sns
+    sns.histplot(lenee)
+#%%
+if __name__ == "__main__" :
 
     tqdm.pandas(desc="Processing text")
-    docs_df['text_processed'] = docs_df.texte.progress_apply(processing)
+    docs_df_correct['text_processed'] = docs_df_correct['section_clean_1'].progress_apply(processing)
     #docs_df.drop(['texte'],axis = 1,inplace = True)
 
-    pickle.dump(docs_df,open('Data/Workinprogress/docs_df.pickle','wb'))
+#%%
+if __name__ == "__main__" :
+    pickle.dump(docs_df_correct,open('Data/Workinprogress/df_section_clean.pickle','wb'))
 
 
 #%%
@@ -175,6 +183,8 @@ def get_info(vectoriseur,matrix,thesaurus_df):
     """
     Entrées : 
     - vectoriseur : instance de CountVectorizer sklearn
+    - matrix : matrice du fit_transform
+    - thesaurus sous forme dataframe col Enjeux et Dictionnaire
 
     Sorties :
     - 0 word2id
@@ -191,7 +201,6 @@ def get_info(vectoriseur,matrix,thesaurus_df):
     sum_words = X.sum(axis = 0).tolist()[0]
     word2id = countVecto.vocabulary_
     vocab = tuple(word2id.keys())
-
     cov = {}
     id2word = {idd:word for word, idd in word2id.items() }
     words_freq = [(word, sum_words[idx]) for word, idx in     word2id.items()]
@@ -225,7 +234,7 @@ def get_info(vectoriseur,matrix,thesaurus_df):
 
 # In[350]:
 
-def isinvocab(mot):
+def isinvocab(mot,vocab_sort):
     for line in vocab_sort:
         if mot in line:
             return(True)
@@ -242,3 +251,5 @@ def isinvocab(mot):
 #    Le mot/bi/tri n'apparait pas du tout dans le corpus (autosolisme, analyse cycle vie, nuage toxique, radon...)
 
 
+
+# %%

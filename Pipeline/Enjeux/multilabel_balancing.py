@@ -132,6 +132,7 @@ def MLSMOTE(X,y, n_sample):
     n = len(indices2)
     new_X = np.zeros((n_sample, X.shape[1]))
     target = np.zeros((n_sample, y.shape[1]))
+    
     for i in range(n_sample):
         reference = random.randint(0,n-1)
         neighbour = random.choice(indices2[reference,1:])
@@ -148,6 +149,61 @@ def MLSMOTE(X,y, n_sample):
     target = pd.concat([y, target], axis=0)
     return new_X, target
 
+def MLSMOTE2(X,y, n_sample):
+    """
+    Give the augmented data using MLSMOTE algorithm
+    
+    args
+    X: pandas.DataFrame, input vector DataFrame
+    y: pandas.DataFrame, feature vector dataframe
+    n_sample: int, number of newly generated sample
+    
+    return
+    new_X: pandas.DataFrame, augmented feature vector data
+    target: pandas.DataFrame, augmented target vector data
+    """
+    #liste de liste des 5 plus proches voisins pour chaque entrée
+    indices2 = nearest_neighbour(X)
+    #nombre de sample initial
+    n = len(indices2)
+    new_X = np.zeros((n_sample, X.shape[1]))
+    target = np.zeros((n_sample, y.shape[1]))
+    tail_labels = get_tail_label(y)
+    for i in range(n_sample):
+        #On choisit un indice d'un sample de X au pif
+        reference = random.randint(0,n-1)
+        #On prend un voisin du sample au pif
+        neighbour = random.choice(indices2[reference,1:])
+        #On prend la liste des voisins du sample précédent
+        all_point = indices2[reference]
+        #Crée le dataframe des sorties voisins
+        nn_df = y[y.index.isin(all_point)]
+
+        ser = nn_df.sum(axis = 0, skipna = True)
+
+        #Si la classe est représentée plus de 2 fois dans les voisins,
+        #on considère que la classe est dans la target synthétique
+        #AJOUT : Si la classe est représentée une seule fois et que c'est un label
+        #dans la tail, on considère que la classe est présente dans le nouveau sample
+        classes = ser.index
+        lol = []
+        for val,index in zip(ser,classes):
+            if val>3 or (val>1 and index in tail_labels):
+                lol.append(1)
+            else:
+                lol.append(0)
+        target[i] = np.array(lol)
+        ratio = random.random()
+        gap = X.loc[reference,:] - X.loc[neighbour,:]
+        new_X[i] = np.array(X.loc[reference,:] + ratio * gap)
+    new_X = pd.DataFrame(new_X, columns=X.columns)
+    target = pd.DataFrame(target, columns=y.columns)
+    new_X = pd.concat([X, new_X], axis=0)
+    target = pd.concat([y, target], axis=0)
+    return new_X, target
+
+
+
 if __name__=='main':
     """
     main function to use the MLSMOTE
@@ -156,11 +212,5 @@ if __name__=='main':
     X_sub, y_sub = get_minority_instance(X, y)   #Getting minority instance of that datframe
     X_res,y_res =MLSMOTE(X_sub, y_sub, 100)     #Applying MLSMOTE to augment the dataframe
 
-#%%
-if __name__=='main':
-    X,y = create_multilabel_dataset()
-    tail = get_tail_label(y)
-    X_sub, y_sub = get_minority_instance(X, y)
-    X_res,y_res = MLSMOTE(X_sub,y_sub,1000)   #Getting minority instance of that datframe
 
-#%%
+# %%
