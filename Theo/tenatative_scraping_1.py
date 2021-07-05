@@ -41,8 +41,10 @@ with open(chemin+"my_pdf.pdf", 'wb') as my_data:
     my_data.write(content)
 
 #%%
+########################
+###### On récupère les pdf des études d'impact
+########################
 
-# On récupère les pdf des études d'impact
 try:
     os.mkdir(chemin+'PDF_EI')
 except:
@@ -50,36 +52,198 @@ except:
 
 vidage=True
 if vidage:
-    for f in os.listdir(chemin+'PDF_EI'):
-        os.remove(chemin+'PDF_EI/'+f)
+    for f in os.listdir(chemin+'PDF_EI/check_erreur'):
+        try:
+            os.remove(chemin+'PDF_EI/check_erreur/'+f)
+        except:
+            break
 #%%
+import PyPDF2
+import os
+
+listpasbon_404=[]
+listpasbon_vide=[]
 for i in tqdm(df_clos['DC.Relation.Expertise Ã©tudeimpact'].values):
-    response=requests.get(i)#,headers=he,proxies=proxy)
-    response.close()
-    k=list(df_clos['DC.Relation.Expertise Ã©tudeimpact']).index(i)
-    with open(chemin+"PDF_EI/"+i.split('/')[-1], 'wb') as my_data:
-        my_data.write(response.content)
+    try:
+        response=requests.get(i)#,headers=he,proxies=proxy)
+        if response.status_code==200:
+            response.close()
+            k=list(df_clos['DC.Relation.Expertise Ã©tudeimpact']).index(i)
+            with open(chemin+"PDF_EI/check_erreur/"+i.split('/')[-1], 'wb') as my_data:
+                my_data.write(response.content)
+            pdfFileObj = open(chemin+"PDF_EI/check_erreur/"+i.split('/')[-1], 'rb')
+            try: #On vérifie si le pdf est vide ou pas
+                pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+                pdfFileObj.close()
+            except:
+                pdfFileObj.close(chemin+"PDF_EI/check_erreur/"+i.split('/')[-1])
+                os.remove()
+                listpasbon_vide.append(i.split('/')[-1])
+        else:
+            listpasbon_404.append(i.split('/')[-1])
+    except:
+        continue
 #%%
-# On récupère les pdf des avis
+fichiers=os.listdir(chemin+"PDF_EI/check_erreur/")
+pdfnonvalide=[]
+size=[]
+for f in fichiers:
+    pdfFileObj = open(chemin+"PDF_EI/check_erreur/"+f, 'rb')
+    size.append(os.path.getsize(chemin+"PDF_EI/check_erreur/"+f))
+    try:
+        pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+        pdfFileObj.close()
+    except:
+        pdfnonvalide.append(f)
+#%%
+print("Il y a :",len(pdfnonvalide),"PDF non valides soit",round((len(pdfnonvalide)/len(fichiers))*100,2),"% de l'ensemble")
+#%%
+import matplotlib.pyplot as plt
+f,a=plt.subplots(1,figsize=(12,6))
+a.hist(size,bins=100)
+a.set(xlabel="Taille (en Mo)",ylabel='Nombre de fichiers',
+      title='distribution de la taille des pdf')
+#%%
+size=[i/1000/1000 for i in size]
+print("La taille moyenne est :",np.mean(size))
+print("L'écart-type est :",np.std(size))
+print("La médiane est :",np.median(size))
+# plusieurs choses : la moyenne est quasiment le double de la médiane, 
+# la distribution est très fortement concentrée
+# D'ailleurs l'écart-type est très très élevé
+
+
+#%%
+########################
+##### On récupère les pdf des avis
+########################
+
 
 try:
-    os.mkdir(chemin+'PDF_Avis')
+    os.mkdir(chemin+'PDF_Avis/check_erreur')
 except:
     print('Le dossier existe déjà.')
 
+vidage=False
 if vidage:
     for f in os.listdir(chemin+'PDF_Avis'):
         os.remove(chemin+'PDF_Avis/'+f)
 
+import PyPDF2
+import shutil
+
+vidage=True
+if vidage:
+    for f in os.listdir(chemin+'PDF_Avis/check_erreur'):
+        try:
+            os.remove(chemin+'PDF_Avis/check_erreur/'+f)
+        except:
+            break
+#%%
+listpasbon_avis_404=[]
+listpasbon_avis_vide=[]
+
 for i in tqdm(df_clos['DC.Relation.Expertise avisae'].values):
     try:
-        response=requests.get(i)#,headers=he,proxies=proxy)
-        response.close()
-        k=list(df_clos['DC.Relation.Expertise avisae']).index(i)
-        with open(chemin+"PDF_Avis/"+i.split('/')[-1], 'wb') as my_data:
-            my_data.write(response.content)
+        response=requests.get(i,headers=he,proxies=proxy)
+        if response.status_code==200:
+            response.close()
+            k=list(df_clos['DC.Relation.Expertise avisae']).index(i)
+            with open(chemin+"PDF_Avis/check_erreur/"+i.split('/')[-1], 'wb') as my_data:
+                my_data.write(response.content)
+            pdfFileObj = open(chemin+"PDF_Avis/check_erreur/"+i.split('/')[-1], 'rb')
+            try: #On vérifie si le pdf est vide ou pas
+                pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+                pdfFileObj.close()
+                print("Avis scrapé !")
+            except:
+                pdfFileObj.close(chemin+"PDF_Avis/check_erreur/"+i.split('/')[-1])
+                os.remove()
+                listpasbon_avis_vide.append(i.split('/')[-1])
+        else:
+            listpasbon_avis_404.append(i.split('/')[-1])
     except:
         print("Il n'y a pas d'avis")
+
+#%%
+dico_pasbon={}
+# dico_pasbon['EI_404']=listpasbon_404
+# dico_pasbon['EI_vide']=listpasbon_vide
+dico_pasbon['Avis_404']=listpasbon_avis_404
+dico_pasbon['Avis_vide']=listpasbon_avis_vide
+import pickle
+pickle.dump(dico_pasbon,open(chemin+"PDF_EI/check_erreur/dico_pasbon_avis.pickle",'wb'))
+#%%
+dico_EI=pickle.load(open(chemin+"PDF_EI/check_erreur/dico_pasbon.pickle",'rb'))
+dico_EI
+#%%
+dico_avis=pickle.load(open(chemin+"PDF_EI/check_erreur/dico_pasbon_avis.pickle",'rb'))
+dico_avis
+#%%
+#######################################################################################################
+######### vérification problème OCR #
+#############################################################################################
+df_clos['num_etude']=[int(i[:-8].split('/')[-1]) for i in df_clos['DC.Relation.Expertise Ã©tudeimpact'].values]
+#%%
+########## Fichier d'image non reconnu 
+
+#link=df_clos[df_clos.num_etude==2663489]['DC.Relation.Expertise Ã©tudeimpact'].values[0]
+
+# link=df_clos[df_clos.num_etude==1106625]['DC.Relation.Expertise Ã©tudeimpact'].values[0]
+#%%
+#Un qui marche
+link=df_clos[df_clos.num_etude==969856]['DC.Relation.Expertise Ã©tudeimpact'].values[0]
+#%%
+######### PDF non valide
+
+link=df_clos[df_clos.num_etude==2225340]['DC.Relation.Expertise Ã©tudeimpact'].values[0]
+# On a bien status_code==200 donc a priori il y a bien un pdf
+#%%
+he={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:87.0) Gecko/20100101 Firefox/87.0'}
+proxy={'http':'http://cache.ritac.i2:32000',
+'https':'http://cache.ritac.i2:32000'
+}
+url='https://www.google.com/search'
+
+resp=requests.get(link,timeout=(10,200))#,headers=he,proxies=proxy)
+resp.status_code==200
+#%%
+with open(chemin+"PDF_EI/test.pdf", 'wb') as my_data:
+                my_data.write(resp.content)
+                my_data.close()
+#%%
+with open(chemin+"PDF_EI/test.pdf", 'rb') as my_data:
+                pdf=my_data.read()
+#%%
+# import subprocess
+# subprocess.Popen([chemin+"PDF_EI/test.pdf"],shell=False)
+# open(chemin+"PDF_EI/test.pdf")
+# try:
+#     os.system(chemin+"PDF_EI/test.pdf")
+# except:
+#     print('ouverture non possible')
+import PyPDF2
+  
+# creating a pdf file object
+pdfFileObj = open(chemin+"PDF_EI/969856_FEI.pdf", 'rb')
+  
+# creating a pdf reader object
+pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+  
+#%%
+import PyPDF2
+# pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+pdfFileObj.close()
+import os
+#%%
+
+pdfFileObj = open(chemin+"PDF_EI/test.pdf", 'rb')
+import PyPDF2
+try:
+    pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+except:
+    pdfFileObj.close()
+    os.remove(chemin+"PDF_EI/test.pdf")
 
 # %%
 ##########################################################################################################################################################
@@ -117,7 +281,6 @@ response.close()
 with open(chemin+"Garance/"+"essai.pdf", 'wb') as my_data:
     my_data.write(response.content)
 #%%
-
 try:
     os.mkdir(chemin+'Garance')
 except:
@@ -127,17 +290,20 @@ vidage=True
 if vidage:
     for f in os.listdir(chemin+'Garance'):
         os.remove(chemin+'Garance/'+f)
-
+pasbon404=0
 df_avis_2=df_avis[[df_avis.lien_document[i] is not None for i in df_avis.index]]
 for i in tqdm(df_avis_2.index):
     k=str(int(df_avis_2.dossier[i]))
     h=str(df_avis_2.lib_type_evt[i])
     try:
         response=requests.get(link+df_avis_2.lien_document[i])#,headers=he,proxies=proxy)
-        response.close()
-        # k=list(df_clos['DC.Relation.Expertise avisae']).index(i)
-        with open(chemin+"Garance/"+k+"_"+h+".pdf", 'wb') as my_data:
-            my_data.write(response.content)
+        if response.status_code==200
+            response.close()
+            # k=list(df_clos['DC.Relation.Expertise avisae']).index(i)
+            with open(chemin+"Garance/"+k+"_"+h+".pdf", 'wb') as my_data:
+                my_data.write(response.content)
+        else:
+            pasbon404+=1
     except:
         print("Il n'y a pas d'avis")
 
@@ -213,4 +379,22 @@ for i in theme:
 print(mots)
 import pickle
 pickle.dump(mots,open(chemin+"Thesaurus_LegiFrance.pickle","wb"))
+# %%
+import pickle
+chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+
+dico=pickle.load(open(chemin+"Thesaurus_LegiFrance.pickle",'rb'))
+# %%
+#####################################################################################
+import os
+liste_1=os.listdir("C:/Users/theo.roudil-valentin/Documents/Donnees/PDF_EI")
+liste_2=os.listdir("C:/Users/theo.roudil-valentin/Documents/Donnees/PDF_EI/pasbon_html")
+import shutil
+liste_1=[i for i in liste_1 if i[-3:]=='pdf']
+from tqdm import tqdm
+print(liste_1)
+for i in tqdm(liste_1):
+    if i not in liste_2:
+        shutil.copy("C:/Users/theo.roudil-valentin/Documents/Donnees/PDF_EI/"+i,'D:/PDF_EI/'+i)
+
 # %%

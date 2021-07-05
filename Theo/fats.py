@@ -9,8 +9,9 @@ import torch
 import pickle
 import warnings
 from time import time
-from transformers import CamembertModel,BertModel,RobertaModel,CamembertTokenizer
+from transformers import CamembertModel,BertModel,RobertaModel,CamembertTokenizer,CamembertConfig
 import networkx as nx
+import psutil 
 
 class Word_Cleaning():
       def __init__(self,n_jobs,sentence=False,threshold=False,seuil=None,lemma=False,seuil_carac=None):
@@ -260,7 +261,7 @@ class Make_Extractive():
           except:
             vocab=list(set(W2V.wv.key_to_index))
           start=time()
-          text=Parallel(n_jobs=self.cpu)(delayed(self.make_splitting)(s) for s in docs)
+          text=Parallel(n_jobs=self.cpu)(delayed(self.make_splitting)(s) for s in text)
           #text=[[i.split() for i in s] for s in docs]
 
           summary=self.make_splitting(summary,vocab)
@@ -477,62 +478,108 @@ class Make_Embedding():
         return embeddings
 
 class TextRank():
-    def __init__(self):
-        super(TextRank,self).__init__
-        self.bert_embedding=Make_Embedding(tok=CamembertTokenizer('C:/Users/theo.roudil-valentin/Documents/Resume/MLSUM/MLSUM_tokenizer.model'),cpu=psutil.cpu_count())
-        self.camem=CamembertModel(CamembertConfig())
-    def make_embedding_bert(self,articles,camem=None):
-        if camem==None:
-            camem=self.camem
-        dico=self.bert_embedding.make_tokens(articles)
-        input_ids=dico['input_ids']
-        att_mask=dico['attention_mask']
-        embeddings=self.bert_embedding.emb_phrase(input_ids,att_mask,camem)
-        return embeddings,dico
-    
-    @staticmethod
-    def mat_sim(emb_2,cos_sim=torch.nn.CosineSimilarity(dim=0)):
-        ouais=[[cos_sim(emb,y) for y in emb_2] for emb in emb_2]
-        return torch.as_tensor(ouais)
+   def __init__(self):
+      super(TextRank,self).__init__
+      self.bert_embedding=Make_Embedding(tok=CamembertTokenizer('C:/Users/theo.roudil-valentin/Documents/Resume/MLSUM/MLSUM_tokenizer.model'),cpu=psutil.cpu_count())
+      self.camem=CamembertModel(CamembertConfig())
+   def make_embedding_bert(self,articles,camem=None):
+      if camem==None:
+         camem=self.camem
+      dico=self.bert_embedding.make_tokens(articles)
+      input_ids=dico['input_ids']
+      att_mask=dico['attention_mask']
+      embeddings=self.bert_embedding.emb_phrase(input_ids,att_mask,camem)
+      return embeddings,dico
+   
+   @staticmethod
+   def mat_sim(emb_2,cos_sim=torch.nn.CosineSimilarity(dim=0)):
+      ouais=[[cos_sim(emb,y) for y in emb_2] for emb in emb_2]
+      return torch.as_tensor(ouais)
 
 
-    @staticmethod
-    def get_emb_sentence(art,modele,di=0):
-        word=[modele[w] for w in art]
-        word=torch.as_tensor(word).mean(dim=di)
-        return word
+   @staticmethod
+   def get_emb_sentence(art,modele,verbose,di=0):
+      vocab=list(set(modele.wv.vocab))
+      art_2=art.copy()
+      art_2.reverse()
+      for w in art_2:
+         if w in vocab:
+            continue
+         else:
+            if w[:-1] in vocab:
+               art[art.index(w)]=w[:-1]
+            else:
+               art.remove(w)
+               if verbose==1:
+                  print("Le mot :",w,"ne semble pas faire partie du vocabulaire, nous l'enlevons donc de la séquence traitée.")
+         
+      word=[modele[w] for w in art]
+      word=torch.as_tensor(word).mean(dim=di)
+      return word
 
-    def get_matrix_section(self,art,W2V):
-        mat=[self.get_emb_sentence(art[i],W2V) for i in range(len(art))]
-        mat=[torch.as_tensor(np.nan_to_num(i)) if np.isnan(i).sum()>0 else i for i in mat]
-        return mat
+   def get_matrix_section(self,art,W2V,verbose):
+      mat=[self.get_emb_sentence(art[i],W2V,verbose) for i in range(len(art))]
+      mat=[torch.as_tensor(np.nan_to_num(i)) if np.isnan(i).sum()>0 else i for i in mat]
+      return mat
 
-    def make_embedding_W2V(self,article,W2V):
-        article_=[article[i].split() for i in range(len(article))]
-        mat=self.get_matrix_section(article_,W2V)
-        return mat
-    @staticmethod
-    def scores(matrice_similarite,nx=nx,k=3):
-        graph=nx.from_numpy_array(np.array(matrice_similarite))
-        scores=nx.pagerank_numpy(graph)
-        rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
-        rank=[s[0] for s in rank]
-        return rank
-    
-    def make_resume(self,article,type,W2V=None,k=3):
-        if type=='bert':
-            b,d=self.make_embedding_bert(article)
-            mb=self.mat_sim(b)
-            sb=self.scores(mb,k=k)
-            resume=[article[i] for i in sb]
-            return resume
-        elif type=='word2vec':
-            assert W2V!=None
-            w=TR.make_embedding_W2V(article,W2V)
-            mw=TR.mat_sim(w)
-            sw=TR.scores(mw,k=k)
-            resume=[article[i] for i in sw]
-            return resume
-        else:
-            raise ValueError("Attention, vous devez spécifier le type d'embedding que vous voulez utiliser, soit 'bert' soit 'word2vec'.")
+   def make_embedding_W2V(self,article,W2V,verbose):
+      article_=[article[i].split() for i in range(len(article))]
+      mat=self.get_matrix_section(article_,W2V,verbose)
+      return mat
+   @staticmethod
+   def scores(matrice_similarite,nx=nx,k=3):
+      graph=nx.from_numpy_array(np.array(matrice_similarite))
+      scores=nx.pagerank_numpy(graph)
+      rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
+      rank=[s[0] for s in rank]
+      return rank
+   
+   def make_resume(self,article,type,W2V=None,k=3,verbose=1):
+      if type=='bert':
+         b,d=self.make_embedding_bert(article)
+         mb=self.mat_sim(b)
+         sb=self.scores(mb,k=k)
+         resume=[article[i] for i in sb]
+         return resume
+      elif type=='word2vec':
+         assert W2V!=None
+         w=self.make_embedding_W2V(article,W2V,verbose)
+         mw=self.mat_sim(w)
+         sw=self.scores(mw,k=k)
+         resume=[article[i] for i in sw]
+         return resume
+      else:
+         raise ValueError("Attention, vous devez spécifier le type d'embedding que vous voulez utiliser, soit 'bert' soit 'word2vec'.")
 
+class BERTScore():
+      def __init__(self,camem=CamembertModel(CamembertConfig()),
+      cosim=torch.nn.CosineSimilarity(dim=-1)) -> None:
+         super(BERTScore,self).__init__
+         self.make_embedding=TextRank().make_embedding_bert
+         self.camem=camem
+         self.cosim=cosim
+
+      def make_score(self,article):
+         b,_=self.make_embedding(article,self.camem)
+         b=torch.stack(b)
+         VSA=b.mean(dim=0)
+         score=self.cosim(VSA,b)
+         return score
+      
+      def make_summary(self,article,k=3):
+         score=self.make_score(article)
+         score=score.topk(k=k)[1]
+         resume=[article[i] for i in score]
+         return resume
+
+
+def Random_summary(section,k=2):
+   x1=np.random.randint(low=0,high=len(section),size=k)
+   resume=[]
+   for i in x1:
+      resume.append(section[i])
+   return resume
+
+def Lead_3(sections,k=3):
+   resume=sections[:k]
+   return resume

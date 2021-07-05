@@ -17,17 +17,18 @@ import psutil
 from tqdm import tqdm
 import pickle
 import os
+from fats import Make_Extractive
+
 # Tout d'abord donc il nous faut des phrases appartennant à un document (article, paragraphe etc...).
 # Pour le moment, on va télécharger les articles d'OrangeSum, on va essayer le TextRank pour voir si on retrouve celles (les phrases) qui ont
 # été labellisées comme proche du résumé fourni (abstractif).
 
 os.chdir("C:/Users/theo.roudil-valentin/Documents/Resume/MLSUM/")
-from fats import Make_Extractive
 cpu=psutil.cpu_count()
 #%%
 Art=[]
 Sum=[]
-for k in range(4):
+for k in range(1):
     articles=pickle.load(open('text_clean_train_'+str(k+1)+'.pickle','rb'))
     Art+=articles
     print(len(articles))
@@ -111,7 +112,6 @@ end=time.time()
 print("Durée de la tokenization des articles :",round((end-start)/60,2),"minutes")
 pickle.dump(tokens,open('tokens.pickle','wb'))
 #%%
-
 MEm=Make_Embedding()
 
 cpu=psutil.cpu_count()
@@ -138,7 +138,8 @@ embedding_section
 # %%
 pickle.dump(embedding_section,open('MLSUM_embedding_articles_train_1.pickle','wb'))
 #%%
-embedding_section=pickle.load(open('embedding_section_bert.pickle','rb'))
+# embedding_section=pickle.load(open('C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\OrangeSum\\embedding_section_bert.pickle','rb'))
+len(embedding_section[0])
 # %%
 emb_len=[len(i) for i in embedding_section]
 import matplotlib.pyplot as plt
