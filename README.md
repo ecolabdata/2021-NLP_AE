@@ -47,7 +47,68 @@ Face à cette difficulté,
 
 ## 2 - Traitement et analyse des enjeux
 **Objectif** : identifier les enjeux présent dans un texte de longueur variable (idéalement le plus court possible)
-### 2.1 -
+
+En non supervisé, on a testé plusieurs approches de topic modeling (LDA, LSA, word2vec + Kmeans, etc...) qui n'ont pas été concluantes car les résultats étaient trop peu utiles et pertinents du point de vue métier.
+On a donc ramené le problème a celui d'une classification multiclasse et multilabel, en utilisant un algorithme semi-supervisé, dans le sens ou il ne prend pas en entrée la "cible" pour s'orienter, mais un thésaurus (dictionnaire de mots associés aux enjeux).
+
+### 2.1 - Algorithme, paramètres, métriques
+L'algorithme utilisé est CorEx (version adaptée pour le topic modeling, voir https://github.com/gregversteeg/corex_topic/tree/master/corextopic).
+C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests. 
+
+Les scripts appliquant les développements décrits plus bas sur les sections et les avis sont section_semisupervised.py et avis_semisupervised.py.
+La classe principale regroupant les techniques et développements appliqués pour améliorer le score est contenue dans topicmodeling_pipe.py.
+
+Chaque amélioration a ses propres paramètres qui sont décrits dans chaque section. CorEx n'a, initialement, que 3 paramètres auxquels on s'est intéressés :
+Lors de l'initialisation de la classe CorEx :
+n_hidden : nombre de topics qui vont être recherchés
+Lors du fit de l'algo :
+anchor_strength : coefficient appliqué pour augmenter l'importance des ancres (dictionnaire du thésaurus) dans le modèle
+anchors : liste de listes d'ancres. Chaque liste d'ancres correspond a un dictionnaire pour un enjeu.
+
+En terme de métriques :
+Puisqu'on ne voulait pas se contenter de mesures "non-supervisées" pour obtenir un résultat vraiment intéressant du point de vue métier (auditeurs de la DREAL),
+nous avons labellisé avec une auditrice un petit nombre d'exemple (un peu moins d'une centaine) d'avis (pas de sections pour le moment !). On a donc les scores
+classiques : precision, accuracy, recall, F1.
+
+Certaines fonctions utiles ont été créées pour mieux visualiser ces scores et les effets d'altérations sur ces scores dans Pipeline.Enjeux.utils (voir notamment evaluate)
+
+Sur certaines approches (bagging et boosting notamment), ont été expérimentés d'autres métriques intéressantes pour notre problème multiclass/multilabel :
+la Hamming Loss (https://scikit-learn.org/stable/modules/generated/sklearn.metrics.hamming_loss.html) et la Label Ranking Loss (https://scikit-learn.org/stable/modules/generated/sklearn.metrics.label_ranking_loss.html). Plus de détails dans la section concernée.
+
+### 2.2 - Enrichissement
+**Objectif** : améliorer les performances par l'enrichissement du thésaurus.
+**Approches** : entrainement d'un word2vec puis calcul de similarité
+**Pistes d'améliorations** : tester d'autres métriques de similarités, trouver de nouvelles approches donnant des recommandations plus pertinentes ?
+
+### 2.2.1 - Calcul de similarité
+Attention : utilisation d'un GPU très hautement recommandée pour le calcul de similarité.
+
+Le fonctionnement de ce script est relativement simple : on appelle la classe maksimilarity sur le thésaurus.
+Ensuite, le .fit permet d'entrainer le modèle W2V gensim, le .transform crée des listes de vecteurs correspondant aux mots du thésaurus retrouvés dans le vocabulaire du W2V (attention aux problèmes de compatibilité selon les versions de gensim, ici tourne sur la version XX), .cos_moyen_all fait le calcul de cosimilarité (étape nécessitant du GPU), .cos_moyen_batch exécute la même tache mais en batch pour réaliser des tests.
+
+A chaque étape, le code sauvegarde automatiquement un fichier correspondant a la sortie générée (sauf le transform qui est très rapide), qu'il est possible d'utiliser lorsqu'on initialise la classe (cf aide de la classe) pour ne pas refaire certaines étapes longues (entrainement du W2V et calcul de cosimilarité).
+
+Le code est optimisé pour tourner sur gpu (via torch.cuda) et cpu mais il reste malgré tout extrêmement lent sur cpu (25 jours de traitement sur un serveur avec 64 coeurs contre 10 min sur gpu pour traiter toutes les données des avis, soit 10Mo de données).
+
+La sortie finale est une matrice (n_words,n_topic) contenant, pour chaque mot, la cosimilarité (CosineSimilarity) moyenne avec chaque vecteur de chaque topic.
+Pour avoir les mots les plus intéressants d'un topic, on regarde donc les mots avec la cosimilarité moyenne la plus forte pour ce topic.
+
+Pour le moment, les tests d'enrichissement automatisés sur les enjeux mal identifiés ne sont pas très concluants (pas d'amélioration en moyenne du score sur un modèle CorEx simple pour la Gestion des déchets sur les Avis).
+Il pourrait être intéressant de tester l'enrichissement sur des modèles en bagging ou boosting, pour éliminer la variance et voir si on constate des améliorations plus significatives en moyenne.
+Le pipeline d'enrichissement n'est pas implémenté car les tests ne sont pas concluants. Il est toutefois possible de retrouver les test dans "semisupervised_avis.py".
+
+### 2.3 - Stratification et augmentation des données
+Un des problèmes constatés est que les enjeux les moins représentés sont moins bien détectés par l'algorithme (performances a 0,3 en F1 contre 0,7 en moyenne).
+Pour résoudre ce souci, deux approches complémentaires ont été testées : la stratification puis l'augmentation des données.
+
+### 2.4 - Bagging et boosting
+Un des problèmes constatés est la grande variance de l'algo : pour deux tests a paramètres identiques (sans random seed) on a des résultats qui peuvent être radicalement différents en terme de performance.
+Pour améliorer cela, on fait du bagging : on entraine un grand nombre de modèle pour arriver a la prédiction moyenne.
+Les performances sont légèrement meilleures (on augmente le F1 score moyen de 0,05), et cela diminue grandement la variance.
+Un paramètre qui est ajouté par cette approche est la sélectivité du modèle : normalement, CorEx applique un seuil, lorsqu'il calcule la probabilité d'apparition d'un topic dans un document, si celle ci est supérieure à 0.5, il considère que l'enjeu est présent. Il est possible avec la méthode
+
+Pour aller plus loin
+
 
 ## 3 - Résumé automatique de sections
 **Objectif** : effectuer du résumé extractif (sélection des phrases pertinentes) sur les sections des études d'impacts.
