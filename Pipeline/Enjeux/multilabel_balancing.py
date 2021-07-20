@@ -139,7 +139,7 @@ def MLSMOTE(X,y, n_sample):
         all_point = indices2[reference]
         nn_df = y[y.index.isin(all_point)]
         ser = nn_df.sum(axis = 0, skipna = True)
-        target[i] = np.array([1 if val>2 else 0 for val in ser])
+        target[i] = np.array([1 if val>3 else 0 for val in ser])
         ratio = random.random()
         gap = X.loc[reference,:] - X.loc[neighbour,:]
         new_X[i] = np.array(X.loc[reference,:] + ratio * gap)

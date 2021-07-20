@@ -14,11 +14,6 @@ stop_words.extend(['avis','environnement','autorite','projet','etude','exploitat
 
 nlp = spacy.load('fr_core_news_sm')
 
-if __name__ == "__main__" :
-    docs_df = pickle.load(open("Data\Bagging_model\df_sections.pickle",'rb'))
-    docs_df.dropna(inplace = True)
-
-    Thesaurus = pickle.load(open("Data\Thesaurus_csv\Thesaurus1.pickle",'rb'))
 
 #%%
 # ## 0. Préparation du Thesaurus et des données
@@ -29,6 +24,7 @@ if __name__ == "__main__" :
 
 #%%
 
+#Fonctions permettant de preprocess le thésaurus
 def processing_mot(text):
     prepro = nlp(text)
     lem = ' '.join(token.lemma_ for token in prepro if token.lemma_ not in stop_words and not len(token.text)<=2 )
@@ -38,6 +34,19 @@ def processing_mot(text):
     s = unidecode.unidecode(s)
     return(s)
 
+def processing_thesaurus(Thesaurus):
+    """
+    Thesaurus : dataframe avec deux colonnes "Enjeux" et "Dictionnaire"
+    """
+    thesau_list_unprocessed = list(Thesaurus.Dictionnaire.values)
+    thesau_list = []
+    for enjeu in thesau_list_unprocessed:
+        thesau_list.append([processing_mot(mot) for mot in enjeu if mot != ''])
+    enjeux_list = list(Thesaurus['Enjeu environnemental'].values)
+    thesau_df = pd.DataFrame({'Enjeux': enjeux_list,'Dictionnaire' : thesau_list})
+    return(thesau_df)
+
+
 def processing(text):
     text = nlp(text)
     string = unidecode.unidecode(' '.join([token.lemma_ for token in text if token.text not in stop_words and not len(token.text)<=2 ]))
@@ -46,57 +55,19 @@ def processing(text):
     string = re.sub(r'  ',' ',string)
     return(string)
 
-def clean_thesau(Thesaurus):
-    """
-    Thesaurus : dataframe avec deux colonnes "Enjeux" et "Dictionnaire"
-    """
-    thesau_list_unprocessed = list(Thesaurus.Dictionnaire.values)
-    thesau_list = []
-    for enjeu in thesau_list_unprocessed:
-        thesau_list.append([processing_mot(mot) for mot in enjeu if mot != ''])
-
-    enjeux_list = list(Thesaurus['Enjeu environnemental'].values)
-
-    #dicoThesau = {k:v for k,v in zip(enjeux_list,thesau_list)}
-
-    thesau_df = pd.DataFrame({'Enjeux': enjeux_list,'Dictionnaire' : thesau_list})
-    return(thesau_df)
-
-#%%
-if __name__ == "__main__" :
-    correct = [100689,100707,102316,106168,110277,114799,118071,120638]
-    docs_df_correct = docs_df[docs_df.num_etude.isin(correct)]
-    docs_df_correct = docs_df_correct[docs_df_correct.section_clean_1.str.len()>50]
-    docs_df_correct = docs_df_correct[docs_df_correct.section_clean_1.str.len()<20000]
-
-    lenee =docs_df_correct.section_clean_1.str.len().tolist()
-    lenee.sort()
-    import seaborn as sns
-    sns.histplot(lenee)
-#%%
-if __name__ == "__main__" :
-
-    tqdm.pandas(desc="Processing text")
-    docs_df_correct['text_processed'] = docs_df_correct['section_clean_1'].progress_apply(processing)
-    #docs_df.drop(['texte'],axis = 1,inplace = True)
-
-#%%
-if __name__ == "__main__" :
-    pickle.dump(docs_df_correct,open('Data/Workinprogress/df_section_clean.pickle','wb'))
-
-
 #%%
 # ## 1. Analyse du vocabulaire existant
 
 # On vectorise les données et on crée des listes pratiques pour manipuler les noms de features, etc...
-if __name__ == "__main__" :
-    docs_df = pickle.load(open('Data/Workinprogress/docs_df.pickle','rb'))
-    Thesaurus = pickle.load(open("Data\Thesaurus_csv\\Thesaurus1_clean.pickle",'rb'))
-#%%
 
-if __name__ == "__main__" :
+def analysis_min_df(text,Thesaurus,N=15):
+    """
+    Fonction d'analyse du paramètre min_df du vectoriseur en terme de présence des mots du thésaurus dans le vocabulaire du vectoriseur
+    Thesaurus : dataframe avec deux colonnes "Enjeux" et "Dictionnaire"
+    """
+    thesau_list,enjeux_list = Thesaurus.Dictionnaire.tolist(),Thesaurus.Enjeux.tolist()
     countVecto = CountVectorizer(min_df = 0, max_df = 0.9, ngram_range=(1,3), stop_words = stop_words)
-    process = countVecto.fit_transform(docs_df.text_processed.values)  
+    process = countVecto.fit_transform(text)  
     word2id = countVecto.vocabulary_
     vocab = tuple(word2id.keys())
     cov = {}
@@ -109,9 +80,9 @@ if __name__ == "__main__" :
                 c+=1
         cov[enjeu] = [c/t]
         
-    for k in range(1,30):
+    for k in range(1,N+1):
         countVecto = CountVectorizer(min_df = k, max_df = 0.9, ngram_range=(1,3), stop_words = stop_words)
-        process = countVecto.fit_transform(docs_df.text_processed.values)  
+        process = countVecto.fit_transform(text)  
         word2id = countVecto.vocabulary_
         vocab = tuple(word2id.keys())
         size.append(len(vocab))
@@ -132,11 +103,16 @@ if __name__ == "__main__" :
 
     plt.legend(loc = 1)
     plt.show()
-    size
+    return(cov)
 
-
+def analysis_max_df(text,Thesaurus,N = 15):
+    """
+    Fonction d'analyse du paramètre max_df du vectoriseur en terme de présence des mots du thésaurus dans le vocabulaire du vectoriseur
+    Thesaurus : dataframe avec deux colonnes "Enjeux" et "Dictionnaire"
+    """
+    thesau_list,enjeux_list = Thesaurus.Dictionnaire.tolist(),Thesaurus.Enjeux.tolist()
     countVecto = CountVectorizer(min_df = 0, max_df = 1, ngram_range=(1,3), stop_words = stop_words)
-    process = countVecto.fit_transform(docs_df.text_processed.values)  
+    process = countVecto.fit_transform(text)  
     word2id = countVecto.vocabulary_
     vocab = tuple(word2id.keys())
     cov = {}
@@ -149,9 +125,9 @@ if __name__ == "__main__" :
                 c+=1
         cov[enjeu] = [c/t]
         
-    for k in range(1,30):
+    for k in range(1,N+1):
         countVecto = CountVectorizer(min_df = 0, max_df = 1-k/100, ngram_range=(1,3), stop_words = stop_words)
-        process = countVecto.fit_transform(docs_df.text_processed.values)  
+        process = countVecto.fit_transform(text)  
         word2id = countVecto.vocabulary_
         vocab = tuple(word2id.keys())
         size.append(len(vocab))
@@ -174,10 +150,8 @@ if __name__ == "__main__" :
     size
 
 
-# A partir des évaluations précédentes, il faut choisir les paramètres de manière a garder le plus grand nombre de mots des dicos dans le vocabulaire sans pour autant prendre un vocabulaire trop grand.
-
-# In[370]:
-
+# A partir des évaluations précédentes, il faut choisir les paramètres de manière a garder le plus grand nombre de mots des dicos
+#  dans le vocabulaire sans pour autant prendre un vocabulaire trop grand.
 
 def get_info(vectoriseur,matrix,thesaurus_df):
     """
@@ -231,25 +205,9 @@ def get_info(vectoriseur,matrix,thesaurus_df):
     return(word2id,vocab,words_freq,vocab_sort,notinvoc)
 
 
-
-# In[350]:
-
 def isinvocab(mot,vocab_sort):
     for line in vocab_sort:
         if mot in line:
             return(True)
     return(False)
 
-
-# On constate que certains mots n'apparaissent pas la plupart du temps car :  
-# 
-#    1/ Le mot transformé du thésaurus n'est pas transformé identiquement dans le corpus  
-#    2/ Il y'a parfois plusieurs versions du mot/bigramme/trigramme avec de légères variations   
-#     
-# Occasionnellement :   
-#   
-#    Le mot/bi/tri n'apparait pas du tout dans le corpus (autosolisme, analyse cycle vie, nuage toxique, radon...)
-
-
-
-# %%
