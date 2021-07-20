@@ -12,6 +12,8 @@ from time import time
 from transformers import CamembertModel,BertModel,RobertaModel,CamembertTokenizer,CamembertConfig
 import networkx as nx
 import psutil 
+import torch.nn as nn
+from torch.autograd import Variable
 
 class Word_Cleaning():
       def __init__(self,n_jobs,sentence=False,threshold=False,seuil=None,lemma=False,seuil_carac=None):
@@ -271,45 +273,81 @@ class Make_Extractive():
        else:
           return_W2V=False
 
-
+       dimension=[len(text),len(text[0]),len(text[0][0]),len(text[0][0][0]),len(text[0][0][0][0])]
+       print(dimension)
        score=[]
        erreur=[]
        import gensim
-       if gensim.__version__<'4.0.0':
-         for sent in tqdm(text):
-            score_=[]
-            for s in sent:
+       if dimension[3]>1:
+         if gensim.__version__<'4.0.0':
+            for sent in tqdm(text):
+               score_=[]
+               for s in sent:
+                  try:
+                     score_.append(torch.stack(
+                           [self.cosim(torch.as_tensor(W2V[i]),torch.as_tensor(W2V[summary[text.index(sent)]]))
+                           for i in s]).mean())
+                  except:
+                     erreur.append([text.index(sent),sent.index(s)])
+                     if verbose==1:
+                        print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
+                     continue
                try:
-                  score_.append(torch.stack(
-                        [self.cosim(torch.as_tensor(W2V[i]),torch.as_tensor(W2V[summary[text.index(sent)]]))
-                        for i in s]).mean())
+                  score.append(torch.stack(score_))
                except:
-                  erreur.append([text.index(sent),sent.index(s)])
-                  if verbose==1:
-                     print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
-                  continue
-            try:
-               score.append(torch.stack(score_))
-            except:
-               score.append(torch.Tensor())
+                  score.append(torch.Tensor())
 
+         else:
+            for sent in tqdm(text):
+               score_=[]
+               for s in sent:
+                  try:
+                     score_.append(torch.stack(
+                           [self.cosim(torch.as_tensor(W2V.wv[i]),torch.as_tensor(W2V.wv[summary[text.index(sent)]]))
+                           for i in s]).mean())
+                  except:
+                     erreur.append([text.index(sent),sent.index(s)])
+                     # print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
+                     continue
+               try:
+                  score.append(torch.stack(score_))
+               except:
+                  score.append(torch.Tensor())
        else:
-         for sent in tqdm(text):
-            score_=[]
-            for s in sent:
+         if gensim.__version__<'4.0.0':
+            for sent in tqdm(text):
+               score_=[]
+               for s in sent:
+                  try:
+                     score_.append(
+                           self.cosim(torch.as_tensor(W2V[s]),
+                           torch.as_tensor(W2V[summary[text.index(sent)]])).mean())
+                  except:
+                     erreur.append([text.index(sent),sent.index(s)])
+                     if verbose==1:
+                        print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
+                     continue
                try:
-                  score_.append(torch.stack(
-                        [self.cosim(torch.as_tensor(W2V.wv[i]),torch.as_tensor(W2V.wv[summary[text.index(sent)]]))
-                        for i in s]).mean())
+                  score.append(torch.stack(score_))
                except:
-                  erreur.append([text.index(sent),sent.index(s)])
-                  # print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
-                  continue
-            try:
-               score.append(torch.stack(score_))
-            except:
-               score.append(torch.Tensor())
+                  score.append(torch.Tensor())
 
+         else:
+            for sent in tqdm(text):
+               score_=[]
+               for s in sent:
+                  try:
+                     score_.append(
+                           self.cosim(torch.as_tensor(W2V.wv[s]),
+                              torch.as_tensor(W2V.wv[summary[text.index(sent)]])).mean())
+                  except:
+                     erreur.append([text.index(sent),sent.index(s)])
+                     # print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
+                     continue
+               try:
+                  score.append(torch.stack(score_))
+               except:
+                  score.append(torch.Tensor())
        if return_W2V:
          return score,text,summary,erreur,W2V
        else:
@@ -392,6 +430,7 @@ class Make_Extractive():
        if tokenizer==None:
           assert voc_size!=None
           tokenizer=self.make_tokenizer(text,voc_size,prefix=prefix,name=name)
+       tokenizer=CamembertTokenizer(tokenizer)
        doc_encod=partial(self.document_encoding,tokenizer=tokenizer,dim=dim)   
        encoding=Parallel(n_jobs=self.cpu)(delayed(doc_encod)(i,j) for i,j in zip(text,output))
        from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
@@ -583,3 +622,435 @@ def Random_summary(section,k=2):
 def Lead_3(sections,k=3):
    resume=sections[:k]
    return resume
+
+
+class Simple_Classifier(nn.Module):
+    def __init__(self, hidden_size):
+        super(Simple_Classifier, self).__init__()
+        self.linear1 = nn.Linear(hidden_size, 1)
+        self.relu=nn.LeakyReLU(negative_slope= 0.01)
+
+    def forward(self, x):
+        x.requires_grad_(True)
+        h = self.linear1(x).squeeze(-1)
+        sent_scores = self.relu(h)
+        return sent_scores.squeeze(-1)
+
+class Multi_Linear_Classifier(nn.Module):
+    def __init__(self, hidden_size):
+        super(Multi_Linear_Classifier, self).__init__()
+        self.linear1 = nn.Linear(hidden_size, int(hidden_size/2))
+        self.linear2 = nn.Linear(int(hidden_size/2),int(hidden_size/6))
+        self.linear3 = nn.Linear(int(hidden_size/6),1)
+        self.Lrelu=nn.LeakyReLU(negative_slope= 0.01)
+        self.softmax=nn.Softmax(dim=-1)
+
+
+    def forward(self, x):#, mask_cls):
+        x.requires_grad_(True)
+        h = self.linear1(x).squeeze(-1)
+        h = self.softmax(h)#self.Lrelu(h) #* mask_cls.float()
+        h = self.linear2(h)
+        h = self.softmax(h)#self.Lrelu(h)
+        h = self.linear3(h)
+        #h = self.softmax(h)#self.Lrelu(h)
+        return h.squeeze(-1)
+    
+
+class SMHA_classifier(nn.Module):
+    def __init__(self, size,nhead):
+        super(SMHA_classifier, self).__init__()
+        self.MHA = nn.MultiheadAttention(size[1], nhead)
+        self.LReLu=nn.LeakyReLU(negative_slope= 0.01)
+        self.sigmoid = nn.Sigmoid()
+        self.LN=nn.LayerNorm(size)
+
+    def forward(self, x):
+        x.requires_grad_(True)
+        h,weights = self.MHA(x,x,x)
+        normalized_h=self.LN(h)
+        sent_scores = self.LReLu(normalized_h) #* mask_cls.float()
+        return sent_scores.mean(dim=2)
+    
+class SMHA_Linear_classifier(nn.Module):
+    def __init__(self, size,nhead,hidden_size):
+        super(SMHA_Linear_classifier, self).__init__()
+        self.MHA = nn.MultiheadAttention(size[1], nhead)
+        self.LReLu=nn.LeakyReLU(negative_slope= 0.01)
+        self.sigmoid = nn.Sigmoid()
+        self.LN=nn.LayerNorm(size)
+        self.linear1 = nn.Linear(hidden_size, int(hidden_size/2))
+        self.linear2 = nn.Linear(int(hidden_size/2),int(hidden_size/6))
+
+    def forward(self, x):
+        x.requires_grad_(True)
+        h,weights = self.MHA(x,x,x)
+        h=self.LN(h)
+        h=self.linear1(h)
+        h=self.LReLu(h)
+        h=self.linear2(h)
+        sent_scores = self.LReLu(h) #* mask_cls.float()
+        return sent_scores.mean(dim=2) 
+    
+
+class Net(nn.Module):
+    def __init__(self,k1,k2,k3,s1,s2,s3):
+        super().__init__()
+        self.conv1 = nn.Conv1d(512, 512, kernel_size=k1,stride=s1)
+        self.pool = nn.MaxPool1d(k2, s2)
+        self.conv2 = nn.Conv1d(512, 512, kernel_size=k3,stride=s3)
+        self.dim=int((768-k1)/s1)+1
+        self.dim=int((self.dim-(k2-1)-1)/s2+1)
+        self.dim=int((self.dim-k3)/s3)+1
+        self.fc1 = nn.Linear(self.dim, int(self.dim/2))
+        self.fc2 = nn.Linear(int(self.dim/2), int(self.dim/8))
+        self.fc3 = nn.Linear(int(self.dim/8), 1)
+        self.LReLu=nn.LeakyReLU(negative_slope= 0.01)
+        self.softmax=nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        x.requires_grad_(True)
+        x = self.pool(self.LReLu(self.conv1(x)))
+        x =self.LReLu(self.conv2(x))
+        #x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = self.LReLu(self.fc1(x))
+        x = self.LReLu(self.fc2(x))
+        x = self.fc3(x)
+        #x=self.softmax(x)
+        return x.flatten(1)
+
+class F1_score:
+    """
+    Class for f1 calculation in Pytorch.
+    """
+
+    def __init__(self):#, average: str = 'weighted'):
+        """
+        Init.
+
+        Args:
+            average: averaging method
+        """
+
+        #self.average = average
+        #if average not in [None, 'micro', 'macro', 'weighted']:
+         #   raise ValueError('Wrong value of average parameter')
+    @staticmethod
+    def true_positive_mean(x,y) -> torch.tensor:
+        '''
+        Caclul le nombre moyen de vrai positif de la prediction x par rapport aux labels y (binaires).
+        '''
+        tp=torch.mul(x,y).sum()
+        tpm=torch.div(tp,y.shape[0])
+        return tpm
+    @staticmethod
+    def false_positive_mean(x,y) -> torch.tensor:
+        '''
+        Caclul le nombre moyen de faux négatif de la prediction x par rapport aux labels y (binaires).
+        '''
+        device=y.device
+        fp=torch.sub(x,y)
+        fp=torch.max(fp,torch.tensor([0.]).to(device))
+        fp=fp.sum().float()
+        fpm=torch.div(fp,y.shape[0])
+        return fpm
+    @staticmethod
+    def false_negative_mean(x,y) -> torch.tensor:
+        '''
+        Caclul le nombre moyen de faux négatif de la prediction x par rapport aux labels y (binaires).
+        '''
+        fn=torch.sub(y,x)
+        device=y.device
+        fn=torch.max(fn,torch.tensor([0.]).to(device))
+        fn=fn.sum().float()
+        fnm=torch.div(fn,y.shape[0])
+        return fnm
+    #@staticmethod
+    def precision(self,x,y) -> torch.tensor:
+        device=y.device
+        tp=self.true_positive_mean(x,y)
+        fp=self.false_positive_mean(x,y)
+        if (tp+fp)!=0:
+            prec=torch.div(tp,(tp+fp))
+            return prec
+        else:
+            return torch.tensor(0.).to(device)
+
+    def recall(self,x,y) -> torch.tensor:
+        tp=self.true_positive_mean(x,y)
+        fn=self.false_negative_mean(x,y)
+        rec=torch.div(tp,(tp+fn))
+        return rec
+    def __call__(self,x,y) -> torch.tensor:
+        device=y.device
+        rec=self.recall(x,y)
+        prec=self.precision(x,y)
+        f1=torch.mul(rec,prec)
+        f1=torch.mul(2,f1)
+        f1=torch.div(f1,prec+rec)
+        if (prec+rec)!=0:
+            return f1#prec,rec,
+        else:
+            return torch.tensor(0.).to(device)#prec,rec,
+
+        
+class Weighted_Loss:
+    '''
+    Fonction permettant de calculer la fonction de perte Mean Absolute Error mais pondérée par des poids.
+    '''
+    def __init__(self,weight,loss_type='L1',binary=True):
+        '''
+        On initialise notre fonction de perte :
+        @weight : les poids que vous voulez pour chaque classe (dim=nombre de classe)
+        '''
+        self.weights=weight
+        self.loss_type=loss_type
+        self.binary=binary
+        
+    def Weighted_L1(self,y_hat,y) -> torch.Tensor:
+        '''
+        On calcule la fonction :
+        @y_hat : les prédictions du modèle
+        @y : les vraies valeurs
+        
+        Attention, dim(y_hat)==dim(y)
+        '''
+        if y_hat.shape!=y.shape:
+            raise ValueError("Attention, les deux inputs n'ont pas la même dimension !")
+        #On met les deux tensors sur le même service (ici GPU)
+        device_yhat=y_hat.device
+        device_y=y.device
+        if device_yhat!=device_y:
+            y.to(device_yhat)
+        
+        w=torch.repeat_interleave(self.weights[0].clone().detach(),y.shape[1])
+        w=w.repeat(y.shape[0],1)
+                
+        if self.binary:
+            w[torch.arange(y.shape[0],dtype=torch.long).unsqueeze(1),torch.topk(y,3)[1]]=self.weights[1]
+        
+        else: #On surpondère les indices qui représentent les phrases, puisque c'est cela que le modèle doit prédire
+            x=torch.nonzero(y!=torch.tensor(0))#.nonzero()
+            x_2=torch.index_select(x,1,torch.tensor(1).to(device_yhat)).reshape(-1).to(device_yhat)
+            x_1=torch.nonzero(x_2==0).to(device_yhat)#.nonzero()
+            sha=torch.arange(y.shape[0],dtype=torch.long).unsqueeze(1).to(device_yhat)
+            
+            for k in range(len(x_1)):
+                if k<(len(x_1)-1):
+                    w[sha[k],x_2[x_1[k]:x_1[k+1]]]=self.weights[1]
+                else:
+                    w[sha[k],x_2[x_1[k]:]]=self.weights[1]
+               
+        sum_weights=w.sum()
+        w=w.to(device_yhat)
+        sum_weights=sum_weights.to(device_yhat)
+        errors=torch.sub(y,y_hat)
+        errors=torch.abs(errors)
+        weighted_errors=torch.mul(w,errors)
+        sum_weighted_errors=weighted_errors.sum()
+        WMAE=torch.div(sum_weighted_errors,sum_weights)
+        #WMAE.requires_grad=True
+        return Variable(WMAE,requires_grad=True)#,sum_weighted_errors,sum_weights
+    
+    def Weighted_Sum(self,y_hat,y) -> torch.Tensor:
+        '''
+        Calcule la somme pondérée de la différence de la prédiction du modèle et du vecteur cible.
+        '''
+        if y_hat.shape!=y.shape:
+            raise ValueError("Attention, les deux inputs n'ont pas la même dimension !")
+        
+        #On met les deux tensors sur le même service (ici GPU)
+        device_yhat=y_hat.device
+        device_y=y.device
+        if device_yhat!=device_y:
+            y.to(device_yhat)
+        
+        w=torch.repeat_interleave(self.weights[0].clone().detach(),y.shape[1])
+        w=w.repeat(y.shape[0],1)
+        
+        if self.binary:
+            w[torch.arange(y.shape[0],dtype=torch.long).unsqueeze(1),torch.topk(y,3)[1]]=self.weights[1]
+        
+        else: #On surpondère les indices qui représentent les phrases, puisque c'est cela que le modèle doit prédire
+            x=torch.nonzero(y!=torch.tensor(0))#.nonzero()
+            x_2=torch.index_select(x,1,torch.tensor(1).to(device_yhat)).reshape(-1).to(device_yhat)
+            x_1=torch.nonzero(x_2==0).to(device_yhat)#.nonzero()
+            sha=torch.arange(y.shape[0],dtype=torch.long).unsqueeze(1).to(device_yhat)
+            
+            for k in range(len(x_1)):
+                if k<(len(x_1)-1):
+                    w[sha[k],x_2[x_1[k]:x_1[k+1]]]=self.weights[1]
+                else:
+                    w[sha[k],x_2[x_1[k]:]]=self.weights[1]
+                    
+        w=w.to(device_yhat)
+        y_diff=torch.abs(torch.sub(y,y_hat))
+        y_diff_pond=torch.mul(y_diff,w)
+        sum_y_diff_pon=torch.div(torch.sum(y_diff_pond),y_hat.shape[0])
+        return Variable(sum_y_diff_pon,requires_grad=True)
+    
+    def __call__(self,y_hat,y) -> torch.Tensor:
+        if self.loss_type=='L1':
+            loss=self.Weighted_L1(y_hat,y)
+            return loss
+        elif self.loss_type=='sum':
+            loss=self.Weighted_Sum(y_hat,y)
+            return loss
+        else:
+            raise ValueError("Attention, veuillez bien spécifier un type de perte.\nSeules les valeurs 'L1' ou 'sum' sont acceptées.")
+
+
+
+
+def training_loop_gpu(model,optimizer,data,score,loss,epochs,camem2,
+   device=torch.device('cuda') if torch.cuda.is_available else torch.device('cpu'),
+   suppress_after=True):
+    '''
+    Cette fonction a pour but d'entraîner des modèles de deep learning via torch.
+    On suppose que votre modèle est déjà sur le GPU.
+    @model : le modèle que l'on veut entraîner, écrit en torch.
+    @optimizer : l'optimiseur que l'on a choisi pour entraîner le modèle, de la famille torch.optim.
+    @data : les données, de type torch.DataLoader.
+    @score : une fonction de score, par exemple F1.
+    @loss : une liste de différentes fonctions de pertes. L'optimisation est faite par rapport à la première fonction de perte de la liste.
+    @epochs : le nombre d'épochs.
+    @camem : le modèle RoBERTa pour l'embedding.
+    @device : sur quel processeur on entraîne.
+    ''' 
+    
+    training_stats = []
+    #score_stat=[]
+    # Boucle d'entrainement
+    model.train()
+   #  model.to(device)
+    model.zero_grad()
+    print("Entraînement du modèle :",str(model).split('(')[0])
+    len_loss=len(loss)
+    start=time()
+
+    for epoch in range(0, epochs):
+
+        # On initialise la loss pour cette epoque
+        total_train_loss = 0
+        if len_loss>1:
+            total_train_loss_2 = 0
+            if len_loss>2:
+                total_train_loss_3 = 0
+        f1_score=0
+        prec_score=0
+
+        # On met le modele en mode 'training'
+        # Dans ce mode certaines couches du modele agissent differement
+
+        # Pour chaque batch
+        for step, batch in enumerate(tqdm(data)):
+
+            # On recupere les donnees du batch
+            input_id = batch[0]#.to(device)
+            mask = batch[1]#.to(device)
+            #clss = batch[2].float().to(device)
+            #mask_cls=batch[3]#.to(device)
+            output=batch[4].float().to(device)
+
+            param1=list(model.parameters())[0].clone()
+
+            # On met le gradient a 0
+            optimizer.zero_grad()#summa_parallel.zero_grad()        
+
+            # On passe la donnee au model et on recupere la loss et le logits (sortie avant fonction d'activation)
+            topvec=camem2(input_id,mask)
+            topvec=topvec.last_hidden_state.to(device)
+            #topvec=topvec.mul(mask_cls.unsqueeze(2)).to(device)
+
+            sortie=model(topvec)
+
+            #On calcule et garde le score pour information, mais le détache pour éviter de faire exploser la mémoire
+            f1_score+=score(sortie,output).detach().item()
+            prec_score+=score.precision(sortie,output).detach().item()
+
+            #output2=make_output_topk(output,k=1).long().to(device)
+            loss_train=loss[0](sortie,output)#.detach().item() # on commente detach sur la loss par rapport à laquelle on veut optimiser
+            if len_loss>1:
+                loss_train_2=loss[1](sortie,output).detach().item()
+                if len_loss>2:
+                    loss_train_3=loss[2](sortie,output).detach().item()
+
+            # Backpropagtion
+            loss_train.backward()
+            # On actualise les paramètres grace a l'optimizer
+            optimizer.step()
+
+            # Checks if the weights did update, if not, informs at which step
+            param2=list(model.parameters())[0].clone()
+            check=bool(1-torch.equal(param1.data,param2.data))
+            if check==False:
+                print("The weights did not update at batch",step,"epoch",epoch)        
+
+            # Keep all the predictions
+            #pred.append(sortie.detach())
+
+            # .item() donne la valeur numerique de la loss
+            total_train_loss += loss_train.detach().item() 
+            if len_loss>1:
+                total_train_loss_2 += loss_train_2#.detach().item() 
+                if len_loss>2:
+                    total_train_loss_3 += loss_train_3#.detach().item() 
+
+        # On calcule les statistiques et les pertes moyennes sur toute l'epoque
+        f1_stat=f1_score/len(data)
+        prec_stat=prec_score/len(data)
+        avg_train_loss = total_train_loss / len(data)
+        if len_loss>1:
+            avg_train_loss_2 = total_train_loss_2 / len(data)   
+            if len_loss>2:
+                avg_train_loss_3 = total_train_loss_3 / len(data)   
+
+                print("\nAverage training loss MSE: {0:.4f}".format(avg_train_loss),
+                      "\nAverage training loss L1: {0:.4f}".format(avg_train_loss_2),
+                      "\nAverage training loss sum: {0:.4f}".format(avg_train_loss_3),
+                      "\nAverage f1 score: {0:.4f}".format(f1_stat),
+                      "\nAverage precision score: {0:.4f}".format(prec_stat))  
+
+                # Enregistrement des stats de l'epoque
+                training_stats.append(
+                    {'epoch': epoch + 1,
+                    'Training Loss MSE': avg_train_loss,
+                    'Training Loss L1': avg_train_loss_2,
+                    'Training Loss sum': avg_train_loss_3,
+                    'Training f1 score': f1_stat,
+                    'Training precision score':prec_stat})
+            else:
+                
+                print("\nAverage training loss MSE: {0:.4f}".format(avg_train_loss),
+                      "\nAverage training loss L1: {0:.4f}".format(avg_train_loss_2),
+                      "\nAverage f1 score: {0:.4f}".format(f1_stat),
+                      "\nAverage precision score: {0:.4f}".format(prec_stat))  
+
+                # Enregistrement des stats de l'epoque
+                training_stats.append(
+                    {'epoch': epoch + 1,
+                    'Training Loss MSE': avg_train_loss,
+                    'Training Loss L1': avg_train_loss_2,
+                    'Training f1 score': f1_stat,
+                    'Training precision score':prec_stat})
+        else:
+            
+                print("\nAverage training loss MSE: {0:.4f}".format(avg_train_loss),
+                      "\nAverage f1 score: {0:.4f}".format(f1_stat),
+                      "\nAverage precision score: {0:.4f}".format(prec_stat))  
+
+                # Enregistrement des stats de l'epoque
+                training_stats.append(
+                    {'epoch': epoch + 1,
+                    'Training Loss MSE': avg_train_loss,
+                    'Training f1 score': f1_stat,
+                    'Training precision score':prec_stat})
+
+    end=time()
+    print("L'entraînement a duré :",round((end-start)/60,2),"minutes.")
+   #  model.to('cpu')
+    if suppress_after:
+       del loss_train
+       torch.cuda.empty_cache()
+
+    return model, optimizer, training_stats
