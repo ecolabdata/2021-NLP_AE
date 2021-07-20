@@ -11,119 +11,60 @@ import numpy as np
 import scipy.sparse as ss
 from corextopic import corextopic as ct
 from Pipeline.Enjeux.utils import *
-stop_words = stopwords.words('french')
-stop_words.extend(['avis','environnement','autorite','projet','etude','exploitation','impact','site','dossier','mission','regionale','mrae','mnhn'])
-from Pipeline.Enjeux.bagging import CorExBoosted
-#Charger thésau et data et vecto data
+from Pipeline.Enjeux.topicmodeling_pipe import CorExBoosted
 
-docs_df = pickle.load(open("Data\Workinprogress\docs_df.pickle",'rb'))
-Thesaurus = pickle.load(open('Data\Thesaurus_csv\Thesaurus1_clean.pickle','rb'))
-# ## 2. Topic modeling semi-supervisé
-#%%
+#On charge notre texte et notre thésaurus
+docs_df = pickle.load(open("Data\Workinprogress\\base_id_avis_txt_sorted",'rb'))
+Thesaurus = pickle.load(open("Data\Thesaurus_csv\Thesaurus1.pickle",'rb'))
 
-
+from Pipeline.Enjeux.processing_encoding import processing_thesaurus
+#Le préprocessing permet de lemmatiser les mots du thésaurus de la même manière que les mots du texte vont l'être (sinon ils ne seront pas reconnus)
+Thesaurus = processing_thesaurus(Thesaurus)
 
 #%%
-instance = CorExBoosted(docs_df,Thesaurus).encode()
-
-#%%
+#On initialise une instance de CorExBoosted
+instance = CorExBoosted(docs_df,Thesaurus)
+#On preprocess les textes
+instance.preprocess('texte')
+#On dispose d'outils de diagnostic du vocabulaire du thésaurus si nécessaire pour visualiser la couverture du vocabulaire (nombre de mots du dictionnaire réellement présents dans le vocabulaire
+# du vectoriseur)
+diagnostics = instance.diagnostic()
+#On encode
+instance.encode()
+#On peux accéder a des informations de diagnostic ici encore grace a la méthode encore qui génère des attributs, respectivement:
+#Le mapping word-id, la fréquence d'apparition des mots, le vocabulaire trié, les mots du thésaurus qui ne sont pas dans le vocabulaire...
+instance.word2id,instance.words_freq,instance.vocab_sort,instance.notinvoc
+#On fit les classifieurs. Ici on stratifie et on augmente les données puisqu'on dispose de données corrigées
 instance.fit(n_classif=10,strength=2)
 #%%
 
+#Tentative d'optimiser les poids de chaque classifieur pour obtenir un meilleur résultat
+#Inefficace pour le moment
 obj = instance.optimize_weights(method = 'SLSQP')
+#Prédiction des présences ou non des topics dans le corpus
 prediction = instance.predict(instance.X,weights=obj.x)
+#Evaluation des résultats (precision, accuracy, recall, F1, pour chaque enjeu)
 sc2 = evaluate(docs_df,prediction,returnscore=True)
 
 #%%
 
+#Optimisation de la sélectivité. Attention a garder une valeur cohérente ! Modifier les bounds (bnds)
+#pour garder une sélectivité raisonnable
 obj2 = instance.optimize_selectivity(bnds=(0.1,0.9))
 prediction = instance.predict(instance.X,selectivity=obj2.x)
-sc2 = evaluate(docs_df,prediction,returnscore=True)
+sc3 = evaluate(docs_df,prediction,returnscore=True)
 #%%
 prediction = instance.predict(instance.X)
 sc1 = evaluate(docs_df,prediction,returnscore=True)
-#delta(sc1,sc2,returnmoy=True)
 
-#%%
-#On va utiliser ce modèle comme modèle initial (vérité
-# approximative pour raffiner le tout)
-k = 2
-topic_model = ct.Corex(n_hidden=len(enjeux_list))
-topic_model.fit(instance.X, words=instance.vocab, anchors=instance.thesau_list, anchor_strength=k)
-mat = topic_model.labels
-sc2 = evaluate(docs_df,mat,returnscore=True)
-delta(sc1,sc2,returnmoy=True)
-#%%
-#On va essayer d'optimiser en faisant du stratified sampling
-y_true,X_sub,y_pred = separate(instance.docs,instance.X,prediction = instance.predict(instance.X))
-
-from sklearn.metrics import label_ranking_loss
-
-label_ranking_loss(y_true,y_pred)
-
-
-#%%
-sc2 = evaluate(docs_df,test,returnscore=True)
-
+#Différence de scores entre le score 2 et le score 1 
+# score 1 = initial, score 2 = après modification, on fait final - initial
 delta(sc1,sc2,returnmoy=True)
 
-#%%
-model = ct.Corex(n_hidden=len(enjeux_list))
-model.fit(np.matrix(X_res), words=vocab, anchors=thesau_list, anchor_strength=k+1)
+# %%
 
-#Prédiction et évaluation sur sur toutes les données
-test = model.predict(X)
-
-sc3 = evaluate(docs_df,test,returnscore=True)
-
-delta(sc1,sc3,returnmoy=True)
-
-#%%
-
-
-#%%
-
-
-test = predict(storage_fitted,X)
-
-sc4 = evaluate(docs_df,test,returnscore=True)
-
-am = [0,0,0,0]
-delta_classifmoy = delta(sc1,sc4,returnmoy=True)
-for classif in storage_fitted:
-    sc = evaluate(docs_df,classif.predict(X),returnscore=True,showgrid=False)
-    d =  delta(sc4,sc,returnmoy=True,showgrid=False)
-    am = vadd(am,d)
-am = np.array(am)/20
-
-#Le bagging surpasse de 6% en moyenne les modèles individuels
-
-#%%
-from sklearn.ensemble import AdaBoostClassifier
-
-clf = AdaBoostClassifier(base_estimator=ct.Corex(n_hidden=len(enjeux_list)))
-clf.fit(X_res,y_res)
-#%%
-#Tests pour avoir le meilleur anchor_strengh
-topic_model_strat = {}
-from os import cpu_count
-from joblib import Parallel,delayed
-from functools import partial
-
-for j in range(10):
-    print(j)
-    topic_model_strat[j] = ct.Corex(n_hidden=len(enjeux_list))
-    topic_model_strat[j].fit(np.matrix(X_sub), words=vocab, anchors=thesau_list, anchor_strength=j+1)
-
-#%%
-grid_scores = {}
-for j in range(10):
-    print(j)
-    pred = topic_model_strat[j].predict(X)
-    grid_scores[j] = evaluate(docs_df,pred,returnscore=True)
-
-#%%
-
+####TOUT CE QUI EST DESSOUS = PISTES D'AMELIORATIONS
+#Parfois un peu brouillon encore
 
 def sample_add(X,sc1,X_sub2,vocab,anchor,strength,enjeux_list,num_average = 20):
     """
@@ -145,43 +86,6 @@ def sample_add(X,sc1,X_sub2,vocab,anchor,strength,enjeux_list,num_average = 20):
         return(True,sc2)
     else:
         return(False,sc1)
-
-#%%
-
-#tentative pour rajotuer des samples de tail pour
-#enrichir l'ensemble d'apprentissage :
-#très long a faire tourner et ni vraiment efficace
-#ni vraiment opti
-
-X_l = X.tolist()
-y = test
-y_df_full = pd.DataFrame(y,columns=enjeux_list)
-X_sub_mat = X_sub.to_numpy().tolist()
-tail = get_tail_label(pd.DataFrame(test,columns=enjeux_list))
-sc1 = sc2
-
-#On essaye de rajouter assez naïvement les lignes
-#contenant des labels de tail pour équilibrer
-for rowX,rowy in zip(X_l,y_df_full.iterrows()):
-    if rowX in X_sub_mat:
-        pass
-    else:
-        tail = get_tail_label(y_sub)
-        label_in_tail = False
-        cols = y_df_full.columns
-        for col in cols:
-            if rowy[1][col] == True and col in tail:
-                label_in_tail = True
-                break
-        if label_in_tail:
-            rowdf = pd.DataFrame([rowX],columns=vocab)
-            X_sub2 = X_sub.append(rowdf)
-            trueVal, sc1 = sample_add(X,sc1,
-            np.matrix(X_sub2.to_numpy()),
-            vocab,thesau_list,2,enjeux_list,num_average=1)
-            if trueVal:
-                X_sub = X_sub2
-                y_sub = y_sub.append(rowy[1].map({False:0,True:1}),ignore_index=True)
 
 
 # %%
@@ -269,9 +173,6 @@ for row1,row2 in zip(topic_model[k].p_y_given_x,topic_model[k].labels):
         line.append((el1,el2))
     ress.append(line)
 ress = np.matrix(ress)
-# %%
-
-####TOUT CE QUI EST DESSOUS = PISTES NULLES
 
 #%%
 #On va essayer d'optimiser en ajoutant un enjeux poubelle vide

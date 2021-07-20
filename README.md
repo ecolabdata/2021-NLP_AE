@@ -51,6 +51,8 @@ Face à cette difficulté,
 En non supervisé, on a testé plusieurs approches de topic modeling (LDA, LSA, word2vec + Kmeans, etc...) qui n'ont pas été concluantes car les résultats étaient trop peu utiles et pertinents du point de vue métier.
 On a donc ramené le problème a celui d'une classification multiclasse et multilabel, en utilisant un algorithme semi-supervisé, dans le sens ou il ne prend pas en entrée la "cible" pour s'orienter, mais un thésaurus (dictionnaire de mots associés aux enjeux).
 
+Pour une prise en main et utilisation rapide, voir les codes "Avis_semisupervised.py" et "Section_semisupervised.py" qui servent d'exemple d'utilisation du pipe.
+
 ### 2.1 - Algorithme, paramètres, métriques
 L'algorithme utilisé est CorEx (version adaptée pour le topic modeling, voir https://github.com/gregversteeg/corex_topic/tree/master/corextopic).
 C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests. 

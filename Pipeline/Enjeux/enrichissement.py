@@ -21,61 +21,6 @@ def represent_word(word):
     text = ' '.join([i for i in text.split() if len(i)>2])
     return text
 
-if __name__ == "main":
-    base = pd.read_csv(open("Data\Etude_html_csv\\base_html_06_04.csv",'rb'))
-    thesaurus="Data\Thesaurus_csv\Thesaurus1.pickle"
-    thesaurus=pickle.load(open(thesaurus,'rb')) #dictionnaire de W2V
-
-    base=base[base.texte.isna()==False]
-    start=time.time()
-    base['clean']=[unidecode(re.sub(r'[^A-Za-z.]',' ',
-                    BeautifulSoup(
-                        base.texte.values[i],"html.parser").get_text()).lower())
-                        for i in range(len(base))]
-    end=time.time()
-    print("Durée :",round((end-start)/60,2),"minutes")
-    base['clean']=[' '.join([i for i in base.clean.values[k].split() if len(i)>3]) for k in range(len(base))]
-
-
-
-    thesau={}
-    for e,i in zip(thesaurus['Enjeu environnemental'],thesaurus.Dictionnaire):
-        thesau[e]=[represent_word(k) for k in i ]+[represent_word(e)]
-    thesau
-
-
-    sentences = []
-    for c in base.clean.values:
-        doc = str(c).split('.')
-        for sent in doc:
-            if sent != '':
-                if sent[0] == ' ':
-                    sentences.append(sent[1:].split(' '))
-                else:
-                    sentences.append(sent.split(' ')) 
-
-
-#%%
-
-if __name__ == "main":
-
-    import pickle
-
-
-    compute = False
-    #Ok je force un peu sur le nombre d'epoch mais on veux un modèle qualité ++
-    if compute:
-        inst = makesimilarity(sentences,thesau)
-        inst.fit(e=100)
-        pickle.dump(inst.W2V,open('Data\Workinprogress\\w2vmodel.pickle','wb'))
-        inst.transform()
-    else:
-        inst = makesimilarity(sentences,thesau, 
-        cosimilarite=pickle.load(open('Data\Workinprogress\\cosimilarite.pickle','rb')),
-        embedding=pickle.load(open('Data\Workinprogress\\w2vmodel.pickle','rb')))
-        inst.transform()
-
-#%%
 class makesimilarity():
     def __init__(self, thesaurus,sentences = None, embedding = None, cosimilarite = None, verbose = 0, jobs = True):
         super(makesimilarity)
@@ -84,6 +29,10 @@ class makesimilarity():
         -sentences : phrases pour le modèle W2V sous la forme d'une liste/vecteur contenant
          les phrases, qui sont elles même des listes/vecteur contenant les mots de la phrase
         -thesaurus : dictionnaire { enjeu : liste de mots }
+        - embedding (optionnel) : fichier contenant le modèle W2V ssauvegardé
+        - cosimilarité (optionnel) : vecteur de similarité de chaque mot avec chaque vecteur moyen des enjeux,
+         shape (n_words,n_topics)
+
         Sorties :
         -vecteur de similarité de chaque mot avec chaque vecteur moyen des enjeux,
          shape (n_words,n_topics)
@@ -104,11 +53,12 @@ class makesimilarity():
             self.cosim = torch.nn.CosineSimilarity(dim=0)
         if embedding != None :
             self.W2V = embedding
+            self.transform()
         if cosimilarite is not None :
             self.cosimilarite = cosimilarite
             self.M = cosimilarite.words.values.tolist()
 
-    def fit(self,fenetre=15,minimum=1,d=300,e=10):
+    def fit(self,fenetre=15,minimum=1,d=300,e=10,save_data = True):
         """
         Entraine le modèle W2V
         """
@@ -121,6 +71,9 @@ class makesimilarity():
         end=time.time()
         print("Durée entraînement du Word2Vec :",round((end-start)/60,2),"minutes.")
         self.W2V = model
+        if save_data:
+            import pickle
+            pickle.dump(model,open('Data\Workinprogress\\w2vmodel.pickle','wb'))
 
     def transform(self):
         """
@@ -214,7 +167,9 @@ class makesimilarity():
             for v in tqdm(self.embedding):
                 cossim.append(self.cos_moyen_enjeux(v))
         else:
-            with tqdm_joblib(tqdm(desc="My calculation", total=len(batch))) as progress_bar:
+            from Pipeline.Enjeux.utils import tqdm_joblib
+            from joblib import Parallel, delayed
+            with tqdm_joblib(tqdm(desc="Calcul de cossimilarité", total=len(self.embedding))) as progress_bar:
                 cossim = Parallel(n_jobs=self.jobs)(delayed(self.cos_moyen_enjeux)(v) for v in self.embedding)
         cossim = pd.DataFrame(np.matrix(cossim),columns = [e for e in self.thesaurus])
         cossim['words'] = inst.M
@@ -258,5 +213,48 @@ class makesimilarity():
             topwords[enjeu] = words
         return(topwords)
 
+#Executé seulement si on travaille directement dans le fichier. 
+#Ce code sert a générer le fichier de cosimilarité (300Mo) qui peut être utilisé ailleurs pour enrichir le thésaurus
+if __name__ == "main":
+    #On vérifie s'il y'a besoin de réentrainer le W2V
+    if not os._exists('Data\Workinprogress\\w2vmodel.pickle'):
+        #Préparation texte et thésaurus
+        base = pd.read_csv(open("Data\Etude_html_csv\\base_html_06_04.csv",'rb'))
+        thesaurus="Data\Thesaurus_csv\Thesaurus1.pickle"
+        thesaurus=pickle.load(open(thesaurus,'rb')) #dictionnaire de W2V
 
-# %%
+        base=base[base.texte.isna()==False]
+        start=time.time()
+        base['clean']=[unidecode(re.sub(r'[^A-Za-z.]',' ',
+                        BeautifulSoup(
+                            base.texte.values[i],"html.parser").get_text()).lower())
+                            for i in range(len(base))]
+        end=time.time()
+        print("Durée :",round((end-start)/60,2),"minutes")
+        base['clean']=[' '.join([i for i in base.clean.values[k].split() if len(i)>3]) for k in range(len(base))]
+
+        sentences = []
+        for c in base.clean.values:
+            doc = str(c).split('.')
+            for sent in doc:
+                if sent != '':
+                    if sent[0] == ' ':
+                        sentences.append(sent[1:].split(' '))
+                    else:
+                        sentences.append(sent.split(' ')) 
+
+        thesau={}
+        for e,i in zip(thesaurus['Enjeu environnemental'],thesaurus.Dictionnaire):
+            thesau[e]=[represent_word(k) for k in i ]+[represent_word(e)]
+
+        #Initialisation
+        inst = makesimilarity(sentences,thesau)
+        #Entrainement et stockage du W2V
+        inst.fit(e=100)
+        #Calcul des cosimilarités
+        inst.cos_moyen_all()
+    else:
+        #Initialisation a partir des données sauvegardées
+        inst = makesimilarity(sentences,thesau, 
+        cosimilarite=pickle.load(open('Data\Workinprogress\\cosimilarite.pickle','rb')),
+        embedding=pickle.load(open('Data\Workinprogress\\w2vmodel.pickle','rb')))
