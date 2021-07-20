@@ -26,6 +26,10 @@ os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
 #On va entrainer un nouveau Word2Vec qui comprendra les phrases 
 # des données de validation en même temps que celles de l'entraînement
 #%%
+##############################################################################################################
+##### 1. Ré-entraînement d'un Word2Vec pour le fichier test #####################################################
+##############################################################################################################
+
 # PAS BESOIN DE REFAIRE TOURNER
 summaries=[i for i in os.listdir() if ('summary_word' in i)]
 # summary=pickle.load(open(summaries[0],'rb'))
@@ -69,6 +73,11 @@ end=time.time()
 print("Le modèle W2V est désormais entraîné et cela a pris :",round((end-start)/60,2),"minutes.")
 W2V.save("W2V_all.model")
 #%%
+##############################################################################################################
+##### 2. Adaptation du texte test pour tenseur et comparaison #####################################################
+##############################################################################################################
+
+
 W2V=gensim.models.Word2Vec.load("W2V_all.model")
 summaries=[i for i in os.listdir("test/") if ('summary_word' in i) and ('test' in i)]
 texts=[i for i in os.listdir("test/") if ('text_word' in i) and ('test' in i)]
@@ -79,99 +88,47 @@ text=pickle.load(open("test/"+texts[0],'rb'))#"test/text_2.pickle",'rb'))
 summary=pickle.load(open("test/"+summaries[0],'rb'))#"test/summary_2.pickle",'rb'))
 assert len(text)==len(summary)
 
-# text=functools.reduce(operator.iconcat, text, [])
-# len(text),len(text[0]),len(text[0][0]),len(text[0][0][0]),len(text[0][0][0][0])
-# summary=functools.reduce(operator.iconcat, summary, [])
-
-# # PROBLEME DE VOCABULAIRE WORD2VEC
-# cosim=torch.nn.CosineSimilarity(-1)
-# import gensim
-# gensim.__version__
-# score=[]
-# verbose=0
-# erreur=[]
-# for sent in tqdm(text[:100]):
-#             score_=[]
-#             for s in sent:
-#                try:
-#                   score_.append(
-#                         cosim(torch.as_tensor(W2V.wv[s]),torch.as_tensor(W2V.wv[summary[text.index(sent)]]))
-#                         .mean())
-#                except Exception as e:
-#                   print(e)
-#                   break
-#                   erreur.append([text.index(sent),sent.index(s)])
-#                   if verbose==1:
-#                      print("Attention, l'élément",erreur[-1],"n'a pas pu être encodé.")
-#                   continue
-#             try:
-#                score.append(torch.stack(score_))
-#             except:
-#                score.append(torch.Tensor())
-
-
 #D'abord, on va transformer le texte pour l'avoir dans le bon format pour le DL
 ME=Make_Extractive(cpu=psutil.cpu_count())
-# score_=[]
-# text_2_=[]
-# summary_2_=[]
-# erreur_=[]
-#%%
-for l in range(1,2):
-   name='train_'+summaries[0].split('.')[0].split('_')[-1]
-   print(name)
-   score_final=[]
-   erreur_f=[]
-   print("Début de la création de l'output :")
-   output_time=time.time()
-   score,text_2,summary_2,erreur=ME.make_output(text[int(len(text)*(l/2)):int(len(text)*((l+1)/2))],
-   summary[int(len(text)*(l/2)):int(len(text)*((l+1)/2))],W2V=W2V,verbose=1)
-   output_end=time.time()
-   # score_.append(score)
-   # text_2_.append(text_2)
-   # summary_2_.append(summary_2)
-   # erreur_.append(erreur)
-   pickle.dump(score,open("test/score_"+str(l)+".pickle",'wb'))
-   # pickle.dump(text_2,open("test/text_2.pickle",'wb'))
-   # pickle.dump(summary_2,open("test/summary_2.pickle",'wb'))
-   pickle.dump(erreur,open("test/erreur_"+str(l)+".pickle",'wb'))
 
-   print("Durée de la création d'output :",round((output_end-output_time)/60,2),"minutes.") #42 minutes pour 15,8K lignes
-   print("Nombre d'erreurs pendant l'encodage du test :",round(len(erreur)/len(text[:10])*100,2),"%")
+#########  Pas besoin de refaire tourner ce qui est commenté, une fois suffit
+# for l in range(2):
+#    name='train_'+summaries[0].split('.')[0].split('_')[-1]
+#    print(name)
+#    score_final=[]
+#    erreur_f=[]
+#    print("Début de la création de l'output :")
+#    output_time=time.time()
+#    score,text_2,summary_2,erreur=ME.make_output(text[int(len(text)*(l/2)):int(len(text)*((l+1)/2))],
+#    summary[int(len(text)*(l/2)):int(len(text)*((l+1)/2))],W2V=W2V,verbose=1)
+#    output_end=time.time()
+#    pickle.dump(score,open("test/score_"+str(l)+".pickle",'wb'))
+#    pickle.dump(erreur,open("test/erreur_"+str(l)+".pickle",'wb'))
 
-# score=score_[0]+score_[1]
-# text_2=text_2_[0]+text_2_[1]
-# summary_2=summary_2_[0]+summary_2_[1]
-# erreur=erreur_[0]+erreur_[1]
+#    print("Durée de la création d'output :",round((output_end-output_time)/60,2),"minutes.") #42 minutes pour 15,8K lignes
+#    print("Nombre d'erreurs pendant l'encodage du test :",round(len(erreur)/len(text[:10])*100,2),"%")
+
+# score_0=pickle.load(open("test/score_0.pickle",'rb'))
+# score_1=pickle.load(open("test/score_1.pickle",'rb'))
+# score=score_0+score_1
+# del score_0, score_1
+
+# erreur_0=pickle.load(open("test/erreur_0.pickle",'rb'))
+# erreur_1=pickle.load(open("test/erreur_1.pickle",'rb'))
+# erreur=erreur_0+erreur_1
+# del erreur_0, erreur_1
 
 # pickle.dump(score,open("test/score.pickle",'wb'))
-# pickle.dump(text_2,open("test/text_2.pickle",'wb'))
-# pickle.dump(summary_2,open("test/summary_2.pickle",'wb'))
 # pickle.dump(erreur,open("test/erreur.pickle",'wb'))
+# os.remove("test/score_0.pickle")
+# os.remove("test/score_1.pickle")
+# os.remove("test/erreur_0.pickle")
+# os.remove("test/erreur_1.pickle")
 
-# score_=pickle.load(open("test/score.pickle",'rb'))
-# text_2_=pickle.load(open("test/text_2.pickle",'rb'))
-# summary_2_=pickle.load(open("test/summary_2.pickle",'rb'))
-# erreur_=pickle.load(open("test/erreur.pickle",'rb'))
-# score_=pickle.load(open("test/score.pickle",'rb'))
-# text_=pickle.load(open("test/text_2.pickle",'rb'))
-# summary_=pickle.load(open("test/summary_2.pickle",'rb'))
-# erreur_=pickle.load(open("test/erreur.pickle",'rb'))
+score=pickle.load(open("test/score.pickle",'rb'))
+erreur=pickle.load(open("test/erreur.pickle",'rb'))
 
-# score_2=score_+score
-# print(len(score_2))
-# text_2_2=text_+text_2
-# print(len(text_2_2))
-# summary_2_2=summary_+summary_2
-# print(len(summary_2_2))
-# erreur_2=erreur_+erreur
-# print(len(erreur_2))
 
-# pickle.dump(score_2,open("test/score.pickle",'wb'))
-# pickle.dump(text_2_2,open("test/text_2.pickle",'wb'))
-# pickle.dump(summary_2_2,open("test/summary_2.pickle",'wb'))
-# pickle.dump(erreur_2,open("test/erreur.pickle",'wb'))
-#%%
 summaries=[i for i in os.listdir("test/") if ('summary_clean' in i) and ('test' in i)]
 texts=[i for i in os.listdir("test/") if ('text_clean' in i) and ('test' in i)]
 print(summaries,texts)
@@ -180,12 +137,10 @@ text_clean=pickle.load(open("test/"+texts[0],'rb'))
 summary_clean=pickle.load(open("test/"+summaries[0],'rb'))
 assert len(text_clean)==len(summary_clean)
 
-score=pickle.load(open("test/score_0.pickle",'rb'))
-# pickle.load(open("test/text_2.pickle",'rb'))
-# pickle.load(open("test/summary_2.pickle",'rb'))
-erreur=pickle.load(open("test/erreur_0.pickle",'rb'))
+# On enlève les phrases dans les paragraphes qui n'ont pas de scores associés
+# Autrement dit, lors de la création du score, ces phrases ont posé problème
+# On les enlève donc des paragraphes
 
-#%%
 for i in erreur:
    print(i)
    try:
@@ -195,49 +150,132 @@ for i in erreur:
    
 len(score[0]),len(text[0]),len(text_clean[0])
 
-#%%
+# On crée le dictionnaire contenant tout les tenseurs pour l'entraînement DL (Deep Learning)
 ME=Make_Extractive(cpu=psutil.cpu_count())
-dico_test=ME.make_encoding(text_clean[:7914],score,tokenizer='MLSUM_tokenizer.model',prefix="test",name="Tokenizer_test",split=1)
-
+start=time.time()
+dico_test=ME.make_encoding(text_clean,score,tokenizer='MLSUM_tokenizer.model',prefix="test",name="Tokenizer_test",split=1)
+end=time.time()
+print(round((end-start)/60,2),"minutes")
 len(dico_test['input'])
-#%%
-nombre_phrase_text_clean=[len(i) for i in text_clean]
+dico_test['trace']
+
+
+# A partir d'ici on va re-nettoyer pour avoir quelque chose de comparable avec
+# les deux familles de modèles : ceux relevant du DL et les autres (BertScore, TextRank etc...)
+# Pour cela, on va devoir découper les paragraphes selon le découpage qui a été fait
+# pour créer les tenseurs pour les modèles DL
+
+# On compte le nombre de phrases présentes dans chaque paragraphe
+nombre_phrase_text_clean=[len(i) for i in text_clean] 
+# On compte le nombre de phrases présentes dans chaque tenseur
 nombre_phrase_input=[i.count(5) for i in dico_test['input']]
-nombre_phrase_text_clean[:10],nombre_phrase_input[:10]
+# On compare les dix premiers pour voir 
+print(nombre_phrase_text_clean[:10],'\n',nombre_phrase_input[:10])
+
+#On crée un nouvel index pour ne pas prendre en compte les scores vides (problème dans l'encodage)
+index_1=[i for i in range(len(score)) if (score[i].shape!=torch.Size([0]))]
+# On enlève de l'index les tenseurs qui n'ont pas de phrases (non encodages encore)
+index_2=[i for i in index_1 if (dico_test['trace'][i]>0)]
+check=[i for i in range(len(score)) if i not in index_2]
+# On regarde si cela ne représente pas trop de paragraphes
+print(len(check),"paragraphes n'ont pas de scores, soit",round((len(check)/len(score))*100,2),"%")
+
+# On prend les paragraphes sur lesquels on va vraiment travailler
+text_clean_prime=[text_clean[i] for i in index_2]
+# Nombre de phrases dans les paragraphes nettoyés 
+nombre_phrase_text_clean_prime=[len(i) for i in text_clean_prime]
+# trace=[(i,dico_test['trace'][i]) for i in range(len(text_clean_prime)) if dico_test['trace'][i]>0]
+# Première trace
+trace=[i for i in dico_test['trace'] if i>0]
+
+# Redécoupage des paragraphes pour mettre au même niveau de comparaison
+P=[nombre_phrase_input[0:trace[0]]]
+print(P)
+z=0
+for i in range(1,len(trace)):
+   z+=len(P[-1])
+   # print(z)
+   P.append(nombre_phrase_input[z:(z+trace[i])])
+
+# Dernière trace, chaque élément contient :
+# (numéro du paragraphe, 
+# nombre de tenseur pour le paragraphe, 
+# nombre de phrases dans chaque tenseur)
+trace_finale=[(i,trace[i],P[i]) for i in range(len(index_2))]
+pickle.dump(trace_finale,open('test/trace_test.pickle','wb'))
+
+def make_new_paragraphes(tcp,trace):
+   paragraphe=[]
+   paragraphe.append(tcp[:trace[-1][0]])
+   if len(trace[-1])>1:
+      for i in range(1,len(trace[-1])):
+         paragraphe.append(tcp[trace[-1][i-1]:(np.sum(trace[-1][:i])+trace[-1][i])])
+   return paragraphe
+# Paragraphes=make_new_paragraphes(text_clean_prime[0],trace_finale[0])
+
+Paragraphes=Parallel(psutil.cpu_count())(delayed(make_new_paragraphes)(i,j) for i,j in zip(text_clean_prime,trace_finale))
+pickle.dump(Paragraphes,open('test/Paragraphes.pickle','wb'))
 #%%
-npi=torch.Tensor(nombre_phrase_input)
-trace=[]
-x_1=0
-x=0
-for k in tqdm(range(len(nombre_phrase_text_clean))):
-   while npi[x_1:x].sum()!=nombre_phrase_text_clean[k]:
-      x+=1
-   trace.append([k,x])
-   x_1=trace[k][1]
-#%%
+##############################################################################################################
+##### 3. Métriques des modèles non-neuronaux #################################################################
+##############################################################################################################
+
+Paragraphes=pickle.load(open('test/Paragraphes.pickle','rb'))
+Paragraphes=functools.reduce(operator.iconcat, Paragraphes, [])
+
 nphrase=2
 TR=TextRank()
 BS=BERTScore()
 
+W2V=gensim.models.Word2Vec.load("W2V_all.model")
+TRB=partial(TR.make_resume,type='bert',k=nphrase,get_score_only=True)
+TRW=partial(TR.make_resume,type='word2vec',W2V=W2V,k=nphrase,get_score_only=True)
+BSR=BS.make_score
+L3=partial(Lead_3,k=nphrase)
+RS=partial(Random_summary,get_index_only=True)
+
+#%%
+start=[]
+end=[]
+
+start.append(time.time())
+TRB_sortie=Parallel(psutil.cpu_count())(delayed(TRB)(i) for i in Paragraphes)
+pickle.dump(TRB_sortie,open('test/TRB_sortie.pickle','wb'))
+end.append(time.time())
+print("TRB :",round((end[-1]-start[-1])/60,2),"minutes")
+
+start.append(time.time())
+TRW_sortie=Parallel(psutil.cpu_count())(delayed(TRW)(i) for i in Paragraphes)
+pickle.dump(TRW_sortie,open('test/TRW_sortie.pickle','wb'))
+end.append(time.time())
+print("TRW :",round((end[-1]-start[-1])/60,2),"minutes")
+
+start.append(time.time())
+BSR_sortie=Parallel(psutil.cpu_count())(delayed(BSR)(i) for i in Paragraphes)
+pickle.dump(BSR_sortie,open('test/BSR_sortie.pickle','wb'))
+end.append(time.time())
+print("BSR :",round((end[-1]-start[-1])/60,2),"minutes")
+
+start.append(time.time())
+L3_sortie=[[1,2,3] for i in Paragraphes]
+pickle.dump(L3_sortie,open('test/L3_sortie.pickle','wb'))
+end.append(time.time())
+print("L3 :",round((end[-1]-start[-1])/60,2),"minutes")
+
+start.append(time.time())
+RS_sortie=Parallel(psutil.cpu_count())(delayed(RS)(i) for i in Paragraphes)
+pickle.dump(RS_sortie,open('test/RS_sortie.pickle','wb'))
+end.append(time.time())
+print("RS :",round((end[-1]-start[-1])/60,2),"minutes")
+
+#%%
+##############################################################################################################
+##### 4. Métriques des modèles neuronaux #####################################################################
+##############################################################################################################
+
 DL_model=SMHA_Linear_classifier(torch.Size([512,768]),8,768)
 path='SMHA_Linear_classifier.pt'
 DL_model.load_state_dict(torch.load(path,map_location=torch.device('cpu')))
-#%%
-dataloader_2=pickle.load(open('train_loader_2.pickle','rb'))
-print("Nombre de batchs :",len(dataloader_2))
-for _,batch in enumerate(dataloader_2):
-    print("Taille du batch :",len(batch[0]))
-    break
-batch
-
-#%%
-W2V=pickle.load(open("W2V_train.pickle","rb"))
-TRB=TR.make_resume(exemple,'bert',k=nphrase)
-TRW=TR.make_resume(exemple,'word2vec',W2V=W2V,k=nphrase)
-BSR=BS.make_summary(exemple,k=nphrase)
-L3=Lead_3(exemple,k=2)
-RS=Random_summary(exemple)
-
 
 #%%
 

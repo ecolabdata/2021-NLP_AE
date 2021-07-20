@@ -190,11 +190,11 @@ def encod_articles(article,output,tokenizer,dim=512):
          encod_clss.append(clss_)
          output_.append(out)
 
-         return encod_article,encod_mask,encod_segs,encod_clss,output_
+         return encod_article,encod_mask,encod_segs,encod_clss,output_#,len(encod_article)
       else:
          raise ValueError("Attention ! La dimension de l'article et de l'ouput sont différentes !")
    except:
-      return encod_article,encod_mask,encod_segs,encod_clss,output_
+      return encod_article,encod_mask,encod_segs,encod_clss,output_#,len(encod_article)
 
 
 
@@ -446,6 +446,7 @@ class Make_Extractive():
        train_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in train_clss])
        train_clss=self.make_tensor_clss(train_clss)
        train_output=self.make_tensor_clss([train[i][4][k] for i in range(len(train)) for k in range(len(train[i][4]))])
+       trace_train=[len(train[i][0]) for i in range(len(train))]
 
        dico_train={
          'input':train_input_ids,
@@ -454,7 +455,8 @@ class Make_Extractive():
          'clss':train_clss,
          'clss_index':clss_index_train,
          'output':train_output,
-         'mask_cls':train_mask_cls
+         'mask_cls':train_mask_cls,
+         'trace':trace_train
        }
 
       #  pickle.dump(dico_train,open(self.path+'/dico_train.pickle','wb'))
@@ -469,6 +471,7 @@ class Make_Extractive():
          test_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in test_clss])
          test_clss=self.make_tensor_clss(test_clss)
          test_output=self.make_tensor_clss([test[i][4][k] for i in range(len(test)) for k in range(len(test[i][4]))])
+         trace_test=[len(test[i][0]) for i in range(len(test))]
 
          dico_test={
             'input':test_input_ids,
@@ -477,7 +480,8 @@ class Make_Extractive():
             'clss':test_clss,
             'clss_index':clss_index_test,
             'output':test_output,
-            'mask_cls':test_mask_cls
+            'mask_cls':test_mask_cls,
+            'trace' : trace_test
          }
          # pickle.dump(dico_test,open(self.path+'/dico_test.pickle','wb'))
          return dico_train,dico_test
@@ -573,20 +577,30 @@ class TextRank():
       rank=[s[0] for s in rank]
       return rank
    
-   def make_resume(self,article,type,W2V=None,k=3,verbose=1):
+   def make_resume(self,article,type,W2V=None,k=3,verbose=1,get_score=False,get_score_only=False):
       if type=='bert':
          b,d=self.make_embedding_bert(article)
          mb=self.mat_sim(b)
          sb=self.scores(mb,k=k)
          resume=[article[i] for i in sb]
-         return resume
+         if get_score:
+            return resume, sb
+         elif get_score_only:
+            return sb
+         else:
+            return resume
       elif type=='word2vec':
          assert W2V!=None
          w=self.make_embedding_W2V(article,W2V,verbose)
          mw=self.mat_sim(w)
          sw=self.scores(mw,k=k)
          resume=[article[i] for i in sw]
-         return resume
+         if get_score:
+            return resume, sw
+         elif get_score_only:
+            return sw
+         else:
+            return resume
       else:
          raise ValueError("Attention, vous devez spécifier le type d'embedding que vous voulez utiliser, soit 'bert' soit 'word2vec'.")
 
@@ -612,12 +626,17 @@ class BERTScore():
          return resume
 
 
-def Random_summary(section,k=2):
+def Random_summary(section,k=2,get_index=False,get_index_only=False):
    x1=np.random.randint(low=0,high=len(section),size=k)
    resume=[]
    for i in x1:
       resume.append(section[i])
-   return resume
+   if get_index:
+      return resume,x1
+   elif get_index_only:
+      return x1
+   else:
+      return resume
 
 def Lead_3(sections,k=3):
    resume=sections[:k]
