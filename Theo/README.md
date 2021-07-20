@@ -4,5 +4,5 @@ Bienvenue dans le dossier de Théo Roudil-Valentin contenant tous les travaux co
 
 Vous trouverez tous les éléments de codes permettant de produire des résumés.
 
-**Attention** : <span style="color:blue">some *blue* text</span>
-<span style="color:red">some **This is Red Bold.** text</span>
+**Attention** : <a style="color:blue">some *blue* text</a>
+<a style="color:red">some **This is Red Bold.** text</a>
