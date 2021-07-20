@@ -77,3 +77,24 @@ for i in pas_bon:
     shutil.copy(chemin+'PDF_EI/'+i+'.pdf',chemin+'PDF_EI/pasbon_txt')
 
 # %%
+chemin="C:/Users/theo.roudil-valentin/Documents/Donnees/"
+
+try: 
+    os.mkdir(chemin+'PDF_EI/nouvel_essai')
+except:
+    print('Le dossier existe déjà.')
+
+fichiers=os.listdir(chemin+'EI_html')
+fichiers=[f[:-5] for f in fichiers if f[-5:]=='.html']
+fichiers_html=fichiers
+
+fichiers=os.listdir(chemin+'PDF_EI/check_erreur')
+fichiers=[f[:-4] for f in fichiers if f[-4:]=='.pdf']
+fichiers_pdf=fichiers
+
+pas_bon=[i for i in fichiers_pdf if i not in fichiers_html]
+import shutil
+for i in pas_bon:
+    shutil.move(chemin+'PDF_EI/check_erreur/'+i+'.pdf',chemin+'PDF_EI/nouvel_essai')
+
+# %%
