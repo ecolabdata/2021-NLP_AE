@@ -15,11 +15,13 @@ from tqdm import tqdm
 import pickle
 import os
 import re
+from transformers.utils.dummy_pt_objects import CamembertModel
+from transformers.utils.dummy_sentencepiece_objects import CamembertTokenizer
 from unidecode import unidecode
 from bs4 import BeautifulSoup
 import gensim
 #%%
-from fats import BERTScore,TextRank,Random_summary,Lead_3,SMHA_Linear_classifier
+from fats import BERTScore, Make_Embedding,TextRank,Random_summary,Lead_3,SMHA_Linear_classifier
 from fats import Make_Extractive
 
 os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
@@ -223,47 +225,135 @@ pickle.dump(Paragraphes,open('test/Paragraphes.pickle','wb'))
 Paragraphes=pickle.load(open('test/Paragraphes.pickle','rb'))
 Paragraphes=functools.reduce(operator.iconcat, Paragraphes, [])
 
+from fats import Make_Embedding
+from transformers import CamembertTokenizer,CamembertModel
+tok=CamembertTokenizer('MLSUM_tokenizer.model')
+camem=CamembertModel.from_pretrained("camembert-base")
+
 nphrase=2
-TR=TextRank()
-BS=BERTScore()
+TR=TextRank(tok_path='MLSUM_tokenizer.model')
+BS=BERTScore('MLSUM_tokenizer.model')
 
 W2V=gensim.models.Word2Vec.load("W2V_all.model")
-TRB=partial(TR.make_resume,type='bert',k=nphrase,get_score_only=True)
-TRW=partial(TR.make_resume,type='word2vec',W2V=W2V,k=nphrase,get_score_only=True)
+TRB=partial(TR.make_resume,type='bert',modele=camem,k=nphrase,get_score_only=True)
+TRW=partial(TR.make_resume,type='word2vec',modele=W2V,k=nphrase,get_score_only=True)
 BSR=BS.make_score
 L3=partial(Lead_3,k=nphrase)
 RS=partial(Random_summary,get_index_only=True)
 
 #%%
+taille=100
 start=[]
 end=[]
+#%%&
+# ME=Make_Embedding(tok)
+# dico=ME.make_tokens(Paragraphes[:5],1)
+# dico.keys()
+# #%%
+# def emb_phrase(input_id,att_mask,cam):
+#    embeddings=[]
+#    for i,a in zip(input_id,att_mask):
+#       try:
+#          embedding=cam(torch.tensor(i).squeeze(1),torch.tensor(a).squeeze(1))
+#          embeddings.append(embedding.last_hidden_state.mean(dim=1))
+#       except:
+#          embedding=cam(torch.tensor(i).squeeze(0),torch.tensor(a).squeeze(0))
+#          embeddings.append(embedding.last_hidden_state.mean(dim=1))
+#          #embeddings.append(embedding[0].mean(dim=0).squeeze(0))
+#    return embeddings
+# ouais=emb_phrase(dico['input_ids'][:2],dico['attention_mask'][:2],camem)
+# len(ouais),ouais[1].size()
+# #%%
+# def emb_phrases(input_ids,att_masks,cam):
+#    embedding=[]
+#    for input_id,att_mask in zip(input_ids,att_masks):
+#       embeddings=emb_phrase(input_id,att_mask,cam)
+#       embedding.append(embeddings)
+#    return embedding
+# ouais=emb_phrases(dico['input_ids'],dico['attention_mask'],camem)
+# #%%
+# ME=Make_Embedding(tok)
+# dico=ME.make_tokens(Paragraphes[0],2)
+# #%%
+# i,a=ME.make_token(Paragraphes[0],1)
+# #%%
+# input_ids=dico['input_ids']
+# att_mask=dico['attention_mask']
+# embedding=camem(torch.tensor(input_ids).squeeze(1),torch.tensor(att_mask).squeeze(1))
+# #%%
 
+# embeddings=ME.emb_phrase(input_ids,att_mask,camem)
+
+# #%%
+# ME=Make_Embedding(tok)
+
+# def make_embedding_bert(articles,camem):
+#    if type(articles[0])==str:
+#       input_ids,att_mask=ME.make_token(articles,2)
+#       embeddings=camem(torch.tensor(input_ids),
+#             torch.tensor(att_mask))
+#       return embeddings
+#    else:
+#       dico=ME.make_tokens(articles,2)
+#       input_ids=dico['input_ids']
+#       att_mask=dico['attention_mask']
+#       embeddings=ME.emb_phrase(input_ids,att_mask,camem)
+#       return embeddings,dico
+# b,d=TR.make_embedding_bert(Paragraphes[0],camem)
+# #%%
+# ouais=camem(torch.tensor(dico['input_ids']).squeeze(0),
+# torch.tensor(dico['attention_mask']).squeeze(0))
+# #%%
+
+# def make_resume(article,modele,k=3,verbose=1,get_score=False,get_score_only=False):
+#    b,d=TR.make_embedding_bert(article,modele)
+#    mb=[TR.mat_sim(h) for h in b]
+#    sb=[TR.scores(m,k=k) for m in mb]
+#    if get_score:
+#       resume=[[article[i][k] for k in sb[i]] for i in range(len(sb))]
+#       return resume, sb
+#    elif get_score_only:
+#       return sb
+#    else:
+#       resume=[[article[i][k] for k in sb[i]] for i in range(len(sb))]
+#       return resume
+
+# resume=make_resume(Paragraphes[:2],modele=camem)
+# resume
+# #%%
 start.append(time.time())
-TRB_sortie=Parallel(psutil.cpu_count())(delayed(TRB)(i) for i in Paragraphes)
+TRB_sortie=Parallel(psutil.cpu_count())(delayed(TRB)(i) for i in Paragraphes[:5])
+# TRB_sortie=TRB(Paragraphes[0])
 pickle.dump(TRB_sortie,open('test/TRB_sortie.pickle','wb'))
 end.append(time.time())
 print("TRB :",round((end[-1]-start[-1])/60,2),"minutes")
-
+#%%
 start.append(time.time())
-TRW_sortie=Parallel(psutil.cpu_count())(delayed(TRW)(i) for i in Paragraphes)
+TRW_sortie=Parallel(psutil.cpu_count())(delayed(TRW)(i) for i in Paragraphes[:2])
 pickle.dump(TRW_sortie,open('test/TRW_sortie.pickle','wb'))
 end.append(time.time())
 print("TRW :",round((end[-1]-start[-1])/60,2),"minutes")
-
+#%%
+# b,_=TR.make_embedding_bert(Paragraphes[0],camem)
+# #%%
+# VSA=b.mean(dim=0)
+# cosim=torch.nn.CosineSimilarity(dim=-1)
+# cosim(VSA,b)
+# #%%
 start.append(time.time())
-BSR_sortie=Parallel(psutil.cpu_count())(delayed(BSR)(i) for i in Paragraphes)
+BSR_sortie=Parallel(psutil.cpu_count())(delayed(BSR)(i) for i in Paragraphes[:2])
 pickle.dump(BSR_sortie,open('test/BSR_sortie.pickle','wb'))
 end.append(time.time())
 print("BSR :",round((end[-1]-start[-1])/60,2),"minutes")
-
+#%%
 start.append(time.time())
 L3_sortie=[[1,2,3] for i in Paragraphes]
 pickle.dump(L3_sortie,open('test/L3_sortie.pickle','wb'))
 end.append(time.time())
 print("L3 :",round((end[-1]-start[-1])/60,2),"minutes")
-
+#%%
 start.append(time.time())
-RS_sortie=Parallel(psutil.cpu_count())(delayed(RS)(i) for i in Paragraphes)
+RS_sortie=Parallel(psutil.cpu_count())(delayed(RS)(i) for i in Paragraphes[:taille])
 pickle.dump(RS_sortie,open('test/RS_sortie.pickle','wb'))
 end.append(time.time())
 print("RS :",round((end[-1]-start[-1])/60,2),"minutes")
