@@ -357,6 +357,9 @@ RS_sortie=Parallel(psutil.cpu_count())(delayed(RS)(i) for i in Paragraphes[:tail
 pickle.dump(RS_sortie,open('test/RS_sortie.pickle','wb'))
 end.append(time.time())
 print("RS :",round((end[-1]-start[-1])/60,2),"minutes")
+#%%
+TRB_sortie=pickle.load(open('test/TRB_sortie.pickle','rb'))
+
 
 #%%
 ##############################################################################################################

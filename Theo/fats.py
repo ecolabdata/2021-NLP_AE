@@ -1,5 +1,7 @@
+from typing import Text
 import numpy as np
-import os  
+import os
+from torch._C import Value  
 from unidecode import unidecode
 import re
 from joblib import Parallel,delayed
@@ -658,13 +660,14 @@ class Make_Embedding():
         return embedding
 
 class TextRank():
-   def __init__(self,tok_path,cpu=psutil.cpu_count()):
+   def __init__(self,tok_path=None,cpu=psutil.cpu_count()):
       '''
       @tok_path: chemin vers le tokenizer à utiliser
       @cpu: nombre de cpu à utiliser
       '''
       super(TextRank,self).__init__
-      self.bert_embedding=Make_Embedding(tok=CamembertTokenizer(tok_path),cpu=cpu)
+      if tok_path!=None:
+         self.bert_embedding=Make_Embedding(tok=CamembertTokenizer(tok_path),cpu=cpu)
       self.camem=CamembertModel(CamembertConfig())
       self.cpu=cpu
         
@@ -752,7 +755,7 @@ class TextRank():
          assert modele!=None
          w=self.make_embedding_W2V(article,modele,verbose)
          mw=self.mat_sim(w)#[self.mat_sim(k) for k in w]
-         sw=self.scores(mw)#[self.scores(m,k=k) for m in mw]
+         sw=self.scores(mw,k=k)#[self.scores(m,k=k) for m in mw]
          resume=[article[i] for i in sw]#[[article[k][i] for i in sw[k]] for k in range(len(sw))]
          if get_score:
             if len(resume)==1:
@@ -770,7 +773,7 @@ class TextRank():
          raise ValueError("Attention, vous devez spécifier le type d'embedding que vous voulez utiliser, soit 'bert' soit 'word2vec'.")
 
 class BERTScore():
-      def __init__(self,tok,camem=CamembertModel(CamembertConfig()),
+      def __init__(self,tok,camem=CamembertModel.from_pretrained("camembert-base"),#CamembertModel(CamembertConfig()),
       cosim=torch.nn.CosineSimilarity(dim=-1)) -> None:
          super(BERTScore,self).__init__
          self.make_embedding=TextRank(tok).make_embedding_bert
@@ -1238,3 +1241,41 @@ def training_loop_gpu(model,optimizer,data,score,loss,epochs,camem2,
        torch.cuda.empty_cache()
 
     return model, optimizer, training_stats
+
+class Resume():
+   def __init__(self,type_,k,modele=None,tok_path=None):
+      super(Resume,self).__init__
+      if type_=='TextRankBert':
+         try:
+            self.TextRank=TextRank(tok_path)
+            self.r=partial(self.TextRank.make_resume,
+                           type='bert',
+                           modele=modele,
+                           k=k)
+         except:
+            print("Êtes-vous certain d'avoir mis le chemin du tokenizer en ayant spécifié que vous vouliez un embedding BERT ?\n Êtes-vous certain d'avoir spécifié un tokenizer correct ?")
+      elif type_=='TextRankWord2Vec':
+         self.TextRank=TextRank()
+         self.r=partial(self.TextRank.make_resume,
+                        type='word2vec',
+                        modele=modele,
+                        k=k)
+      elif type_=='BertScore':
+         if modele!=None:
+            self.BS=BERTScore(tok_path,camem=modele)
+         else:
+            self.BS=BERTScore(tok_path)
+         self.r=partial(self.BS.make_summary,
+                              k=k)
+      elif type_=='Lead3':
+         self.r=partial(Lead_3,k=k)
+      elif type_=='Random':
+         self.r=Random_summary
+      else:
+         raise ValueError("Il semblerait que vous n'ayez pas spécifié de type pour le résumé.\nVous pouvez spécifier les types suivants : TextRankBert,TextRankWord2Vec,BertScore,Lead3,Random")
+   
+   def resume(self,sequence):
+      res=self.r(sequence)
+      return res
+
+        
