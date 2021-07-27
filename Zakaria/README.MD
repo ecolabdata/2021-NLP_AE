@@ -9,7 +9,7 @@ KeyBoost est un outil d'extraction de mots clés simple et facile à utiliser qu
 
 KeyBoost a la structure d'un *méta-modèle* qui consolide les extractions de mots-clés de nombreux modèles de manière à former un *consensus* global sur les mots-clés les plus pertinents.
 
-Une plongée technique approfondie sur les tenants et aboutissants de cette architecture est disponible [ici] (#note_technique)
+Une plongée technique approfondie sur les tenants et aboutissants de cette architecture est disponible [ici] (https://github.com/ecolabdata/2021-NLP_AE/blob/master/Zakaria/Docs/Documentation.pdf)
 
 <a name="toc"/></a>
 ## Table des Matières  
