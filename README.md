@@ -175,7 +175,7 @@ Pour des explications plus précises, voir _Note technique_ dans Theo.
 
 ## 4 - Extraction de mots-clés
 
-**Objectif** :
+**Objectifs** :
 * Extraire des mots-clés pertinents sur les sections des études d'impacts (et tout autres documents) en l'absence de données labellisées et de recul sur le meilleur modèle pour un cas d'usage donné.
 * Proposer un package directement actionnable pour toutes personnes/organisations voulant extraire des mots-clés sur un corpus de texte sans expertise prélable ni a priori sur les performances des nombreux modèles disponibles.
 
