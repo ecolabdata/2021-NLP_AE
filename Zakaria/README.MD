@@ -12,7 +12,7 @@ KeyBoost a la structure d'un *méta-modèle* qui consolide les extractions de mo
 Une plongée technique approfondie sur les tenants et aboutissants de cette architecture est disponible [ici] (#note_technique)
 
 <a name="toc"/></a>
-## Table of Contents  
+## Table des Matières  
 <!--ts-->
    1. [A propos](#about)  
    2. [Bien commencer](#gettingstarted)    
@@ -22,7 +22,7 @@ Une plongée technique approfondie sur les tenants et aboutissants de cette arch
 
 
 <a name="about"/></a>
-## 1. About the Project
+## 1. A propos
 [Back to ToC](#toc)  
 
 Chargé d'appliquer l'extraction de mots clés aux sections des études d'impacts et des avis issus de la DREAL Bretagne, j'ai été confronté à la grande diversité des techniques disponibles rendant tout arbitrage entre elles frustrant pour plusieurs raisons.
@@ -47,7 +47,7 @@ diversité en termes de typologie des techniques utilisées (*statiscal* pour YA
 keyBoost est conçu avec le désir de fournir un outil prêt à l'emploi simple et facile pour l'extraction de mots clés avec le moins de compromis possible. L'objectif est de générer les mots-clés les plus pertinents compte tenu de l'absence d'expertise dans le domaine avec seulement quelques lignes de code.
 
 <a name="gettingstarted"/></a>
-## 2. Getting Started
+## 2. Bien commencer
 [Back to ToC](#toc)  
 
 <a name="installation"/></a>
@@ -59,7 +59,7 @@ pip install git+https://github.com/IIZCODEII/keyboost.git#egg=keyboost
 ```
 
 <a name="usage"/></a>
-###  2.2. Basic Usage
+###  2.2. Utilisation basique
 
 La tâche basique d'extraction de mots-clés d'un document avec keyBoost peut se faire en quelques lignes de code :
 
