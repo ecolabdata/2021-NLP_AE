@@ -6,6 +6,8 @@ from unidecode import unidecode
 import re
 from joblib import Parallel,delayed
 from functools import partial
+import functools
+import operator
 from tqdm import tqdm
 import torch
 import pickle
@@ -16,8 +18,19 @@ import networkx as nx
 import psutil 
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
+import sys
 
 class Word_Cleaning():
+    '''
+    Classe permettant le nettoyage du texte.
+    @n_jobs : nombre de cpu, attention, plutôt ne pas en mettre beaucoup (2 par exemple) à cause de la mémoire.
+    @sentence : dummy pour indiquer si on coupe les paragraphes, fixé à True, doit l'être sir vous ne mettez qu'un paragraphe à la fois.
+    @threshold : dummy pour indiquer l'activation de la sélection des mots suffisamment grand, fixé à True.
+    @seuil : seuil pour la taille des mots, fixé à 2.
+    @lemma : activation de la lemmatisation, fixé à False
+    @seuil_carac : seuil pour le nombre de caractères dans la phrase, fixé à 3.
+    '''
       def __init__(self,n_jobs,sentence=False,threshold=False,seuil=None,lemma=False,seuil_carac=None):
         super(Word_Cleaning,self).__init__
         self.cpu=n_jobs
@@ -29,13 +42,20 @@ class Word_Cleaning():
     
       @staticmethod
       def remove_empty(text):
+        #trace_empty=[]
         if type(text[0])==str:
+            #for i in range(len(text)):
+             #   if text[i]=='':
+              #      trace_empty.append(i)
             while '' in text:
                   text.remove('')
         elif type(text[0])==list:
+            #for i in range(len(text)):
+             #   if text[i]==[]:
+              #      trace_empty.append(i)
             while [] in text:
                 text.remove([])
-        return text
+        return text#,trace_empty
     
       def make_sentence(self,phrases):
         phrases_2=phrases.split('.')
@@ -119,6 +139,7 @@ class Word_Cleaning():
       
 
 def encod_articles(article,output,tokenizer,dim=512):
+   #tokenizer=CamembertTokenizer(tokenizer)
    encod_article=[]
    encod_mask=[]
    encod_phrase=[]
@@ -209,6 +230,7 @@ def encod_articles(article,output,tokenizer,dim=512):
 
 
 def encod_articles_inference(article,tokenizer,dim=512):
+   #tokenizer=CamembertTokenizer(tokenizer)
    encod_article=[]
    encod_mask=[]
    encod_phrase=[]
@@ -216,8 +238,8 @@ def encod_articles_inference(article,tokenizer,dim=512):
    segs=[]
    encod_segs=[]
 
-   clss_=[0]
-   encod_clss=[]
+   #clss_=[0]
+   #encod_clss=[]
 
    try:
         # On prend chaque phrase dans l'article considéré
@@ -236,9 +258,9 @@ def encod_articles_inference(article,tokenizer,dim=512):
                   else:
                      seg=list(np.repeat(1,len(encod))) #Sinon des 1 
                   segs=segs+seg #On ajoute pour que le vecteur de segment suive le vecteur des tokens
-                  clss=len(encod) 
-                  if article.index(phrase)!=(len(article)-1):
-                     clss_=clss_+[clss_[-1]+clss] #Via ce vecteur, on veut garder la trace des premiers tokens de chaque phrase
+                  #clss=len(encod) 
+                  #if article.index(phrase)!=(len(article)-1):
+                   #  clss_=clss_+[clss_[-1]+clss] #Via ce vecteur, on veut garder la trace des premiers tokens de chaque phrase
                   #Du coup on prend le token 0, puis le premier token de chaque phrase, donc pour cela
                   #on ajoute la longueur des nouvelles phrases (en tokens)
 
@@ -258,8 +280,8 @@ def encod_articles_inference(article,tokenizer,dim=512):
                   encod_phrase=encod #On a stocké le vecteur qui allait être trop grand (>512), donc maintenant
                   #On peut repartir avec la nouvelle phrase (encod donc)
 
-                  encod_clss.append(clss_)
-                  clss_=[0] #On réinitialise 
+                  #encod_clss.append(clss_)
+                  #clss_=[0] #On réinitialise 
 
          #Ensuite une fois qu'on a terminé de passer en revue toutes les phrases de l'article
          #on va stocker les derniers vecteurs, donc
@@ -280,11 +302,12 @@ def encod_articles_inference(article,tokenizer,dim=512):
          encod_phrase=encod_phrase+list(np.repeat(1,index))
          encod_article.append(encod_phrase)
          
-         encod_clss.append(clss_)
+         #encod_clss.append(clss_)
 
-         return encod_article,encod_mask,encod_segs,encod_clss#,len(encod_article)
+         return encod_article,encod_mask,encod_segs#,encod_clss#,len(encod_article)
    except:
-      return encod_article,encod_mask,encod_segs,encod_clss#,len(encod_article)
+      print("Unexpected error:", sys.exc_info())
+      return encod_article,encod_mask,encod_segs#,encod_clss#,len(encod_article)
 
 
 
@@ -532,23 +555,24 @@ class Make_Extractive():
          train_input_ids=[train[i][0][k] for i in range(len(train)) for k in range(len(train[i][0]))]
          train_mask=[train[i][1][k] for i in range(len(train)) for k in range(len(train[i][1]))]
          train_segs=[train[i][2][k] for i in range(len(train)) for k in range(len(train[i][2]))]
-         train_clss=[train[i][3][k] for i in range(len(train)) for k in range(len(train[i][3]))]
-         clss_index_train=[len(i) for i in train_clss]
-         train_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in train_clss])
-         train_clss=self.make_tensor_clss(train_clss)
-         train_output=self.make_tensor_clss([train[i][4][k] for i in range(len(train)) for k in range(len(train[i][4]))])
+         #train_clss=[train[i][3][k] for i in range(len(train)) for k in range(len(train[i][3]))]
+         #clss_index_train=[len(i) for i in train_clss]
+         #train_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in train_clss])
+         #train_clss=self.make_tensor_clss(train_clss)
+         train_output=self.make_tensor_clss([train[i][-1][k] for i in range(len(train)) for k in range(len(train[i][4]))])
          trace_train=[len(train[i][0]) for i in range(len(train))]
 
          dico_train={
             'input':train_input_ids,
             'mask':train_mask,
             'segs':train_segs,
-            'clss':train_clss,
-            'clss_index':clss_index_train,
+            #'clss':train_clss,
+            #'clss_index':clss_index_train,
             'output':train_output,
-            'mask_cls':train_mask_cls,
+            #'mask_cls':train_mask_cls,
             'trace':trace_train
          }
+         dico_train['mask_cls']=(torch.Tensor(dico_train['input'])==torch.tensor(5)).int()
 
          #  pickle.dump(dico_train,open(self.path+'/dico_train.pickle','wb'))
          
@@ -557,52 +581,65 @@ class Make_Extractive():
             test_input_ids=[test[i][0][k] for i in range(len(test)) for k in range(len(test[i][0]))]
             test_mask=[test[i][1][k] for i in range(len(test)) for k in range(len(test[i][1]))]
             test_segs=[test[i][2][k] for i in range(len(test)) for k in range(len(test[i][2]))]
-            test_clss=[test[i][3][k] for i in range(len(test)) for k in range(len(test[i][3]))]
-            clss_index_test=[len(i) for i in test_clss]
-            test_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in test_clss])
-            test_clss=self.make_tensor_clss(test_clss)
-            test_output=self.make_tensor_clss([test[i][4][k] for i in range(len(test)) for k in range(len(test[i][4]))])
+            #test_clss=[test[i][3][k] for i in range(len(test)) for k in range(len(test[i][3]))]
+            #clss_index_test=[len(i) for i in test_clss]
+            #test_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in test_clss])
+            #test_clss=self.make_tensor_clss(test_clss)
+            test_output=self.make_tensor_clss([test[i][-1][k] for i in range(len(test)) for k in range(len(test[i][-1]))])
             trace_test=[len(test[i][0]) for i in range(len(test))]
 
             dico_test={
                'input':test_input_ids,
                'mask':test_mask,
                'segs':test_segs,
-               'clss':test_clss,
-               'clss_index':clss_index_test,
+               #'clss':test_clss,
+               #'clss_index':clss_index_test,
                'output':test_output,
                'mask_cls':test_mask_cls,
                'trace' : trace_test
             }
             # pickle.dump(dico_test,open(self.path+'/dico_test.pickle','wb'))
+            dico_test['mask_cls']=(torch.Tensor(dico_test['input'])==torch.tensor(5)).int()
             return dico_train,dico_test
 
          return dico_train
 
        else:
             tokenizer=CamembertTokenizer(tokenizer)
-            doc_encod=partial(self.encoding_inference,tokenizer=tokenizer,dim=dim)   
-            train=Parallel(n_jobs=self.cpu)(delayed(doc_encod)(i) for i in text)
-            from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-
-            train_input_ids=[train[i][0][k] for i in range(len(train)) for k in range(len(train[i][0]))]
-            train_mask=[train[i][1][k] for i in range(len(train)) for k in range(len(train[i][1]))]
-            train_segs=[train[i][2][k] for i in range(len(train)) for k in range(len(train[i][2]))]
-            train_clss=[train[i][3][k] for i in range(len(train)) for k in range(len(train[i][3]))]
-            clss_index_train=[len(i) for i in train_clss]
-            train_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in train_clss])
-            train_clss=self.make_tensor_clss(train_clss)
-            trace_train=[len(train[i][0]) for i in range(len(train))]
-
+            doc_encod=partial(self.encoding_inference,tokenizer=tokenizer,dim=dim)
+            
+            if type(text[0])==list:
+                train=Parallel(n_jobs=self.cpu)(delayed(doc_encod)(i) for i in text)
+                train_input_ids=[train[i][0][k] for i in range(len(train)) for k in range(len(train[i][0]))]
+                train_mask=[train[i][1][k] for i in range(len(train)) for k in range(len(train[i][1]))]
+                train_segs=[train[i][2][k] for i in range(len(train)) for k in range(len(train[i][2]))]
+                #train_clss=[train[i][3][k] for i in range(len(train)) for k in range(len(train[i][3]))]
+                #clss_index_train=[len(i) for i in train_clss]
+                #train_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in train_clss])
+                #train_clss=self.make_tensor_clss(train_clss)
+                trace_train=[len(train[i][0]) for i in range(len(train))]
+                
+            elif type(text[0])==str:
+                train=doc_encod(text)
+                train_input_ids=[train[0][k] for k in range(len(train[0]))]
+                train_mask=[train[1][i] for i in range(len(train[1]))]
+                train_segs=[train[2][i] for i in range(len(train[2]))]
+                #train_clss=[train[3][i] for i in range(len(train[3]))]
+                #clss_index_train=[len(i) for i in train_clss]
+                #train_mask_cls=torch.as_tensor([list(self.make_mask_cls(t)) for t in train_clss])
+                #train_clss=self.make_tensor_clss(train_clss)
+                trace_train=[len(train[i][0]) for i in range(len(train))]
+                
             dico_train={
                'input':train_input_ids,
                'mask':train_mask,
                'segs':train_segs,
-               'clss':train_clss,
-               'clss_index':clss_index_train,
-               'mask_cls':train_mask_cls,
+               #'clss':train_clss,
+               #'clss_index':clss_index_train,
+               #'mask_cls':train_mask_cls,
                'trace':trace_train
             }
+            dico_train['mask_cls']=(torch.Tensor(dico_train['input'])==torch.tensor(5)).int()
             return dico_train
 
 
@@ -774,9 +811,9 @@ class TextRank():
 
 class BERTScore():
       def __init__(self,tok,camem=CamembertModel.from_pretrained("camembert-base"),#CamembertModel(CamembertConfig()),
-      cosim=torch.nn.CosineSimilarity(dim=-1)) -> None:
+      cosim=torch.nn.CosineSimilarity(dim=-1),cpu=1) -> None:
          super(BERTScore,self).__init__
-         self.make_embedding=TextRank(tok).make_embedding_bert
+         self.make_embedding=TextRank(tok,cpu=cpu).make_embedding_bert
          self.camem=camem
          self.cosim=cosim
 
@@ -1242,40 +1279,269 @@ def training_loop_gpu(model,optimizer,data,score,loss,epochs,camem2,
 
     return model, optimizer, training_stats
 
-class Resume():
-   def __init__(self,type_,k,modele=None,tok_path=None):
-      super(Resume,self).__init__
-      if type_=='TextRankBert':
-         try:
-            self.TextRank=TextRank(tok_path)
-            self.r=partial(self.TextRank.make_resume,
+
+def correct_mask_cls(input_ids):
+    vec=(torch.as_tensor(input_ids)==torch.tensor(5)).nonzero()
+    mask=torch.zeros(torch.as_tensor(input_ids).size())
+    mask[vec]=1
+    return mask
+
+
+def make_dataloader(dico_train,prefix,cpu_max=None,batch_size=64):
+    '''
+    A partir du dico fourni par la classe, crée un dataloader utilisable.
+    '''
+    train_input_ids=dico_train['input']
+    train_mask=dico_train['mask']
+    clss=dico_train['clss']
+    train_mask_cls=dico_train['mask_cls']
+    train_output=dico_train['output']
+    trace=dico_train['trace']
+
+    ouais=torch.as_tensor([(train_output[i]!=torch.tensor(0)).nonzero().size()[0] for i in range(len(train_output))])
+    v=((train_mask_cls.sum(dim=1)>ouais)==True).nonzero()
+
+    train_mask_cls_2=Parallel(cpu_max)(delayed(correct_mask_cls)(train_input_ids[i]) for i in range(len(train_input_ids)))
+    train_mask_cls_2=torch.stack(train_mask_cls_2)
+
+    v=((train_mask_cls_2.sum(dim=1)>ouais)==True).nonzero()
+
+    np.sum([int(train_mask_cls_2[i].sum())==(train_output[i]!=torch.tensor(0)).nonzero().size(0) for i in range(len(train_output))])/len(train_output)
+
+    out=torch.zeros(train_mask_cls_2.shape,dtype=torch.float64)
+
+    x=(train_output!=torch.tensor(0)).nonzero()
+    dim_1=torch.unique(torch.stack([x[i][0] for i in range(len(x))]))
+
+    x_2=torch.index_select(x,1,torch.tensor(1)).reshape(-1)
+    x_1=(x_2==0).nonzero()
+
+    dim_2=[]
+    for k in tqdm(range(len(x_1))):
+        if k<(len(x_1)-1):
+            dim_2.append(x_2[x_1[k]:x_1[k+1]])
+        else:
+            dim_2.append(x_2[x_1[k]:])
+
+    for k in tqdm(range(len(dim_1))):
+        out[k,(train_mask_cls_2[k]!=torch.tensor(0)).nonzero().squeeze(1)]=train_output[dim_1[k],dim_2[k]]
+
+    train_dataset = TensorDataset(
+        torch.tensor(train_input_ids),
+        torch.tensor(train_mask),
+        clss,
+        train_mask_cls_2,
+        out)
+
+    pickle.dump(train_dataset,open(prefix+'_dataset.pickle','wb'))
+
+    K=len(train_dataset)
+    train_2=TensorDataset(torch.stack([train_dataset[i][0] for i in range(K)]),
+                          torch.stack([train_dataset[i][1] for i in range(K)]),
+                          torch.stack([train_dataset[i][2] for i in range(K)]),
+                          torch.stack([train_dataset[i][3] for i in range(K)]),
+                          torch.stack([train_dataset[i][4] for i in range(K)]))
+
+    print(batch_size)
+
+    dataloader = DataLoader(
+                train_2,
+                sampler = RandomSampler(train_2),
+                batch_size = batch_size)
+
+    pickle.dump(dataloader,open(prefix+'_dataloader.pickle','wb'))
+    return dataloader,train_2
+
+def make_text(texte,j=5,s=True,t=True,seuil=2,lem=False,sc=3):
+    '''
+    Fonction permettant le nettoyage du texte et sa préparation pour l'utilisation dans les modèles de résumé.
+    @texte : le texte à nettoyer, une liste de phrases.
+    @j : n_jobs, nombre de cpu, attention, plutôt ne pas en mettre beaucoup (2 par exemple) à cause de la mémoire.
+    @s : dummy pour indiquer si on coupe les paragraphes, fixé à True, doit l'être sir vous ne mettez qu'un paragraphe à la fois.
+    @t : dummy pour indiquer l'activation de la sélection des mots suffisamment grand, fixé à True.
+    @seuil : seuil pour la taille des mots, fixé à 2.
+    @lem : activation de la lemmatisation, fixé à False
+    @sc : seuil pour le nombre de caractères dans la phrase, fixé à 3.
+    '''
+    WC=Word_Cleaning(n_jobs=j,#Pas trop, attention à la mémoire attribuée à chaque worker !
+                sentence=s, #est-ce qu'on coupe ce qu'il y a dans la liste pour en faire des phrases ? Oui
+                threshold=t, #On active la sélection de mots suffisamment grand
+                seuil=seuil, #seuil pour la taille des mots
+                lemma=lem, #est-ce qu'on lemmatise ?
+                seuil_carac=sc) #nombre de caractères dans la phrase
+    text=WC.make_documents(texte)
+    empty=[]
+    for i in range(len(text)):
+        if (len(text[i])==0) or text[i][0]=='':
+            empty.append(i)
+    text=WC.remove_empty(text)
+    text=functools.reduce(operator.iconcat,text,[])
+    text=WC.remove_empty(text)
+    return text,empty
+
+def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False):
+    '''
+    Fonction permettant d'utiliser les modèles de Deep Learning en torch pour produire des résumés automatiques.
+    @texte : une liste de phrases ou une liste de listes de phrases.
+    @cpu : nombre de cpu à utiliser, je conseille peu de cpu pour garder de la mémoire.
+    @choose_model : le nom du modèle à aller chercher. si vous ne les connaissez pas, ne mettez rien et l'erreur affichera les noms des modèles.
+    @k : nombre de phrases à retenir.
+    @camem : modèle camembert à utiliser, sinon le modèle from_pretrained('camembert_base') sera utilisé.
+    @vs : taille du vocabulaire pour l'encoding, paramètre pour le tokenizer. Fixé à 12000 par convenance.
+    @sp : split, fixé à 1 car cette fonction n'est pas pour l'entraînement.
+    @tok : le chemin vers le tokenizer.
+    @tr : dummy pour l'entraînement, fixé à False donc.
+    @get_score_only : dummy pour ne récupérer que les index des phrases et non les phrases elles-mêmes.    
+    '''
+    
+    try :
+        assert choose_model in ['SMHA','Simple','Net','Multi']
+    except:
+        raise ValueError("Attention, le nom de votre modèle n'est pas correcte, il doit faire partie des noms suivants :\nSMHA (pour Self Multi Head Attention),\nSimple (pour Simple Linear Classifier),\nNet (pour Convolutional Network),\nMulti (pour Multi Linear)")
+    
+    try:
+        assert np.sum([1 if choose_model in i else 0 for i in os.listdir()])>0
+    except:
+        raise ValueError("Attention, ce que vous avez entré pour la variable choose_model ne semble pas convenir. Vous ne possédez probablement pas le modèle dans votre dossier ou l'avez mal rebaptisé. Les noms corrects sont les suivants :\nSMHA_Linear_classifier.pt,\nSimple_Classifier.pt,\nNet.pt,\nMulti_Linear_Classifier.pt")
+        
+    if camem==None:
+        from transformers import CamembertModel
+        camem=CamembertModel.from_pretrained("camembert-base")
+        
+    Text=Parallel(n_jobs=cpu)(delayed(make_text)(t) for t in texte)
+    
+    text=[Text[i][0] for i in range(len(Text))]
+    empty=[Text[i][1] for i in range(len(Text))]
+    
+    dico=Make_Extractive(cpu).make_encoding(text,voc_size=vs,split=sp,tokenizer=tok,training=tr)
+    
+    if choose_model=='SMHA':
+        model=SMHA_Linear_classifier(torch.Size([512,768]),8,768)
+        model.load_state_dict(torch.load('SMHA_Linear_classifier.pt',map_location=torch.device('cpu')))
+        model.eval()
+    
+    elif choose_model=='Simple':
+        model=Simple_Classifier(camem.config.hidden_size)
+        model.load_state_dict(torch.load('Simple_Classifier.pt',map_location=torch.device('cpu')))
+        model.eval()
+    
+    elif choose_model=='Net':
+        model=Net(2**8,2**6,2,2,2,2)
+        model.load_state_dict(torch.load('Net.pt',map_location=torch.device('cpu')))
+        model.eval()    
+        
+    elif choose_model=='Multi':
+        model=Multi_Linear_Classifier(camem.config.hidden_size)
+        model.load_state_dict(torch.load('Multi_Linear_Classifier.pt',map_location=torch.device('cpu')))
+        model.eval()    
+    
+    y=model(camem(torch.Tensor(dico['input']).long(),torch.Tensor(dico['mask']).long()).last_hidden_state)
+    t=torch.mul(dico['mask_cls'],y).topk(3)
+    vec=[(dico['mask_cls'][i]==torch.tensor(1)).nonzero() for i in range(len(dico['mask_cls']))]
+    values=t[0]
+    indice=t[1]
+    Ve=[]
+    Va=[]
+    I=[]
+    ind=0
+    for i in range(len(dico['trace'])):
+        Ve.append(vec[ind:ind+dico['trace'][i]])
+        Va.append(values[ind:ind+dico['trace'][i]])
+        I.append(indice[ind:ind+dico['trace'][i]])
+        ind+=dico['trace'][i]
+        
+    Va=[v.reshape(-1) for v in Va]
+    I=[v.reshape(-1) for v in I]
+    
+    I2=[torch.cat([I[k][i*3:(i+1)*3]+512*i for i in range(int(len(I[k])/3))]) for k in range(len(I))]
+    Ve2=[torch.cat([Ve[k][i]+512*i for i in range(len(Ve[k]))]).squeeze(1) for k in range(len(Ve))]
+
+    index=[torch.div(Va[i],Va[i].sum()).topk(k=3)[1] for i in range(len(Va))]
+    vrai_index=[I2[i][index[i]] for i in range(len(texte))]
+
+    rindex=[torch.cat([(Ve2[h]==vrai_index[h][i]).nonzero().squeeze(1) for i in range(k)]) for h in range(len(Ve2))]
+    
+    a=[[i for i in range(len(texte[k]))] for k in range(len(texte))]
+    
+    for i in range(len(texte)):
+        for k in empty[i]:
+            a[i].remove(k)
+    Index_final=[[a[k][i] for i in rindex[k]] for k in range(len(rindex))]
+    if get_score_only:
+        return Index_final#,vrai_index,Ve2,I2
+    else:
+        resu=[[texte[i][k] for k in Index_final[i]] for i in range(len(text))]
+        return resu
+
+
+def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None):
+    '''
+    Fonction permettant de produire des résumés sans deep learning.
+    @sequence : liste de phrases.
+    @type_ : type de modèles que vous allez utiliser, si vous ne savez pas, ne mettez rien et l'erreur affichera les options.
+    @k : nombre de phrases désirées.
+    @cpu : nombre de cpu pour la parallélisation, fixé à 2 pour garder de la mémoire disponible.
+    @modele : le modele BERT ou W2V à utiliser pour l'embedding.
+    @tok_path : le chemin vers le tokenizer.    
+    '''
+    
+    if type_=='TextRankBert':
+        try:
+            TextRank=TextRank(tok_path,cpu=cpu)
+            r=partial(TextRank.make_resume,
                            type='bert',
                            modele=modele,
                            k=k)
-         except:
+        except:
             print("Êtes-vous certain d'avoir mis le chemin du tokenizer en ayant spécifié que vous vouliez un embedding BERT ?\n Êtes-vous certain d'avoir spécifié un tokenizer correct ?")
-      elif type_=='TextRankWord2Vec':
-         self.TextRank=TextRank()
-         self.r=partial(self.TextRank.make_resume,
+    
+    elif type_=='TextRankWord2Vec':
+        TextRank=TextRank(cpu=cpu)
+        r=partial(TextRank.make_resume,
                         type='word2vec',
                         modele=modele,
                         k=k)
-      elif type_=='BertScore':
-         if modele!=None:
-            self.BS=BERTScore(tok_path,camem=modele)
-         else:
-            self.BS=BERTScore(tok_path)
-         self.r=partial(self.BS.make_summary,
+    
+    elif type_=='BertScore':
+        if modele!=None:
+            BS=BERTScore(tok_path,camem=modele,cpu=cpu)
+        else:
+            BS=BERTScore(tok_path,cpu=cpu)
+        r=partial(BS.make_summary,
                               k=k)
-      elif type_=='Lead3':
-         self.r=partial(Lead_3,k=k)
-      elif type_=='Random':
-         self.r=Random_summary
-      else:
-         raise ValueError("Il semblerait que vous n'ayez pas spécifié de type pour le résumé.\nVous pouvez spécifier les types suivants : TextRankBert,TextRankWord2Vec,BertScore,Lead3,Random")
-   
-   def resume(self,sequence):
-      res=self.r(sequence)
-      return res
-
         
+    elif type_=='Lead3':
+        r=partial(Lead_3,k=k)
+    
+    elif type_=='Random':
+        r=Random_summary
+    
+    else:
+        raise ValueError("Il semblerait que vous n'ayez pas spécifié de type pour le résumé.\nVous pouvez spécifier les types suivants : TextRankBert,TextRankWord2Vec,BertScore,Lead3,Random")
+      
+    res=r(sequence)
+    return res
+
+def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False):
+    '''
+    Fonction produisant le résumé. 
+    @texte : liste de listes de phrases. Autrement dit, vous avez une liste de paragraphes, vous les tronquez à chaque point, et vous obtenez une liste de liste de phrases.
+    @DL : dummy pour indiquer si vous désirez utiliser des méthodes de Deep Learning.
+    @cpu : nombre de CPU à utiliser, fixé à 2 pour garder de la mémoire disponible (l'embedding est gourmand).
+    @type_ : nom du modèle si vous ne choisissez pas DL.
+    @choose_model : nom du modèle si vous choisissez DL.
+    @k : nombre de phrases, fixé à 3.
+    @camem : le modèle BERT pour le DL.
+    @vs : taille du vocabulaire pour le tokenizer, fixé à 12000.
+    @sp : split, pour le split train test si entraînement. Fixé à 1 car on n'entraîne pas.
+    @tok : chemin vers le tokenizer.
+    @tr : dummy pour savoir si l'on entraine, ici non.    
+    '''
+    
+    if DL:
+        res=make_DL_resume(texte,cpu=cpu,choose_model=choose_model,k=k,camem=camem,vs=vs,sp=sp,tok=tok,tr=tr)
+        return res
+    else:
+        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok)
+        res=[mur(texte[i]) for i in range(len(texte))]
+        return res
