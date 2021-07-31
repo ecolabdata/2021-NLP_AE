@@ -10,40 +10,41 @@ En juin, le projet est divisé en plusieurs parties :
 1. une première partie sur la détection et l'extraction des sommaire de documents PDF, puis leur découpage;
 2. une partie sur le traitement et l'analyse des enjeux (via du **topic modelling**);
 3. une partie sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*).
+4. une partie sur l'extraction de mots-clés (via du **Deep Learning**,**Graphs** et approches **Statistiques** *non supervisées*)
 4. une dernière partie sur un système de recommandation d'avis (fondé sur du **Deep Learning** et du **Collaborative Filtering** notamment )
 
 Pour le moment, il existe quatres dossiers :
 * **Pipeline** : qui correspond aux chemins d'exécutions des travaux ayant été exécutés sur Dataiku. Notamment, l'analyse des enjeux, la détection et l'extraction des sommaires, le découpage des documents; la détection des avis vides.
 * **Ruben** : tous les codes _exploratoires_ de Ruben Partouche (@rbpart).
 * **Theo** : tous les codes _exploratoires_ de Théo Roudil-Valentin (@TheoRoudilValentin).
-* **Zakaria** : tous les codes _exploratoires_ de Zakaria Bekkar (@IIZCODEII).
+* **Zakaria** : tous les codes ainsi que la documentation liés à l'extraction de mots-clés et à la recommandation d'avis (@IIZCODEII).
 
 Ces codes exploratoires sont parfois flous pour des personnes extérieures au projet, mais cela est normal. Les codes finaux seront mis dans **Pipeline** et expliqués par des documents et par des précisions dans le code lui-même.
 
 Pour setup le projet, il faut exécuter le script setup.py depuis la racine du projet (2021-NLP_AE) qui va aussi chercher les dernières données (environ 10Go) sur le disque partagé du SRI (le renommer en K si ce n'est pas le cas pour votre ordinateur). Attention : pour le moment le setup va juste identifier les noms de fichier sans comparer le contenu : il faut supprimer les fichier puis relancer setup si on veux actualiser un fichier (amélioration a faire).
 
 ## 1 - Détection et extraction du sommaire
-Avant toute chose, nous avons transformés en HTML les études d'impact dont nous dispositions, à savoir les dossiers clos disponibles sur https://www.projets-environnement.gouv.fr/pages/home/ (soit environ 650 études). Pour cela, nous avons utilisé le logiciel propriétaire ABBYY Fine Reader. Sur ces 650 études, seules 150 ont été utilisables après le traitement ABBYY, cette réduction est dûe à plusieurs erreurs : mot de passe, PDF trop lourd etc... 
+Avant toute chose, nous avons transformés en HTML les études d'impact dont nous dispositions, à savoir les dossiers clos disponibles sur https://www.projets-environnement.gouv.fr/pages/home/ (soit environ 650 études). Pour cela, nous avons utilisé le logiciel propriétaire ABBYY Fine Reader. Sur ces 650 études, seules 150 ont été utilisables après le traitement ABBYY, cette réduction est dûe à plusieurs erreurs : mot de passe, PDF trop lourd etc...
 ### 1.1 - Construction de la base HTML
-Une fois cette OCRisation (ROC, Reconnaissance Optique de Caractères, ici transformation de PDF en texte) faîte, nous avons utilisé le premier code disponible dans **Pipeline** pour découper chaque fichier disponible, ligne par ligne. Ainsi, nous avons une base de données où pour chaque numéro d'études, nous avions un ensemble de lignes correspondants à celles disponibles dans le fichier HTML : numéro x lignes. Ces lignes comportent donc toute l'information du fichier HTML. Au final, la dimension de la base était d'environ 2M de lignes x une quarantaine de colonnes. 
+Une fois cette OCRisation (ROC, Reconnaissance Optique de Caractères, ici transformation de PDF en texte) faîte, nous avons utilisé le premier code disponible dans **Pipeline** pour découper chaque fichier disponible, ligne par ligne. Ainsi, nous avons une base de données où pour chaque numéro d'études, nous avions un ensemble de lignes correspondants à celles disponibles dans le fichier HTML : numéro x lignes. Ces lignes comportent donc toute l'information du fichier HTML. Au final, la dimension de la base était d'environ 2M de lignes x une quarantaine de colonnes.
 
 Notre hypothèse était que, si l'OCR était correcte, les titres devraient avoir une distribution de balises HTML différente des lignes normales. Ainsi, il devrait être possible de les détecter.
 ### 1.2 - Création des variables (feature engineering)
-Dans un second temps, nous avons donc dû créer des variables permettant d'avoir une représentation de ces distributions. Pour cela, nous avons créé un ensemble de variables dont beaucoup de binaires pour capter l'information disponible dans les lignes. 
-Pour chaque balise présente dans l'ensemble des fichiers HTML fut donc codé une variable binaire pour indiquer la présence de la balise dans la ligne considérée. D'autres variables renseignent sur la longueur de la ligne, le nombre de mots, le nombre de caractères, la présence de caractères spéciaux ou encore la taille de la police d'écriture. De même, une variable importante a été le repérage des lignes proches du mot **sommaire** et avant la première répétition de la première ligne correspondante. Concrètement, lorsqu'apparait le mot "sommaire" (ou "Table des matières" etc...) il est très probable que les lignes suivantes soient des titres, et que ce sommaire s'arrête à la première apparition de la première ligne après le mot "sommaire" (autrement dit, l'apparition du premier titre). Cependant cette variable a posé beaucoup de problèmes car nous avons remarqué que notre processus n'arrivait pas à coder correctement toutes les études. En effet, ces études sont très différentes et font preuve d'un spectre de structure très large, rendant donc la création de variables particulièrement difficile. 
+Dans un second temps, nous avons donc dû créer des variables permettant d'avoir une représentation de ces distributions. Pour cela, nous avons créé un ensemble de variables dont beaucoup de binaires pour capter l'information disponible dans les lignes.
+Pour chaque balise présente dans l'ensemble des fichiers HTML fut donc codé une variable binaire pour indiquer la présence de la balise dans la ligne considérée. D'autres variables renseignent sur la longueur de la ligne, le nombre de mots, le nombre de caractères, la présence de caractères spéciaux ou encore la taille de la police d'écriture. De même, une variable importante a été le repérage des lignes proches du mot **sommaire** et avant la première répétition de la première ligne correspondante. Concrètement, lorsqu'apparait le mot "sommaire" (ou "Table des matières" etc...) il est très probable que les lignes suivantes soient des titres, et que ce sommaire s'arrête à la première apparition de la première ligne après le mot "sommaire" (autrement dit, l'apparition du premier titre). Cependant cette variable a posé beaucoup de problèmes car nous avons remarqué que notre processus n'arrivait pas à coder correctement toutes les études. En effet, ces études sont très différentes et font preuve d'un spectre de structure très large, rendant donc la création de variables particulièrement difficile.
 ### 1.3 - Les étapes de la détection
 Avant de passer directement à la détection, nous avons tenté de faciliter l'apprentissage des futurs modèles. Notamment, nous avons remarqué que beaucoup de variables binaires semblaient apporter la même information. Nous avons donc mis en place une ACP pour réduire la dimension de notre base. Pour les 33 variables binaires dont nous suspections une rendondance d'information, nous avons encodé 12 variables via l'ACP avec un score d'explication de variance très élevé (proche de 98%).
 
 Notre but final étant d'avoir un classifieur permettant de détecter parfaitement les titres, nous avons procédé par étapes.
 D'abord, comme nous travaillions en aveugle, nous n'avions pas d'informations sur les lignes et donc ne savions pas lesquelles étaient des titres ou non, nous avons appliqué un algorithme de K-means (K=2) pour séparer une première fois les lignes, toujours en se basant sur l'hypothèse initiale. Ainsi nous obtenions deux groupes, dont un comportant une grande majorité de ce que nous considérions, à l'oeil humain, comme des titres. L'autre étant constitué de beaucoup de lignes de textes. Cette première classification nous a donc permis d'obtenir une premire __idée__ de la __vraie valeur__ des lignes.
-Puis, nous avons sélectionné un sous-ensemble de 300000 lignes dont nous avons relabellisé les déchets du __groupe des titres__. Ce choix de ne considérer qu'un groupe repose sur le fait que le groupe des titres du K-means était beaucoup plus réduit et semblait contenir beaucoup plus d'erreurs relativement à sa taille. Une piste d'amélioration serait de relabelliser l'ensemble, mais cela demande beaucoup de temps et constitue un travail peu gratifiant. Une fois ce sous-ensemble relabellisé, nous étions donc en possession d'un nouveau label, un raffinement de la prédiction du K-means. C'est ce label qui nous a servi pour entraîner un modèle de __machine learning__ supervisé. 
-A partir de là, nous avons entraîné un modèle de Forêt Aléatoire pour retrouver le label raffiné, en prenant l'ensemble des variables créées via le HTML ainsi que le label fourni par le K-means. Ce modèle réussissait quasiment parfaitement à retrouver le label que nous lui fournissions (score proche voir égal à 1). Cependant, après vérification, bien que le score soit de 1, les titres fournis furent décevants : sommaires incomplets, déchets dans le sommaire voir absence de sommaire. 
+Puis, nous avons sélectionné un sous-ensemble de 300000 lignes dont nous avons relabellisé les déchets du __groupe des titres__. Ce choix de ne considérer qu'un groupe repose sur le fait que le groupe des titres du K-means était beaucoup plus réduit et semblait contenir beaucoup plus d'erreurs relativement à sa taille. Une piste d'amélioration serait de relabelliser l'ensemble, mais cela demande beaucoup de temps et constitue un travail peu gratifiant. Une fois ce sous-ensemble relabellisé, nous étions donc en possession d'un nouveau label, un raffinement de la prédiction du K-means. C'est ce label qui nous a servi pour entraîner un modèle de __machine learning__ supervisé.
+A partir de là, nous avons entraîné un modèle de Forêt Aléatoire pour retrouver le label raffiné, en prenant l'ensemble des variables créées via le HTML ainsi que le label fourni par le K-means. Ce modèle réussissait quasiment parfaitement à retrouver le label que nous lui fournissions (score proche voir égal à 1). Cependant, après vérification, bien que le score soit de 1, les titres fournis furent décevants : sommaires incomplets, déchets dans le sommaire voir absence de sommaire.
 Nous avons donc rajouté une étape de relabellisation de ce dernier label fourni par le modèle de Forêt Aléatoire et de même retravaillé la partie de création de variables.
 Au final, après plusieurs itérations, les résultats furent nettement améliorés bien qu'imparfaits. Pour une majorité d'études, nous étions capables de sortir le sommaire complet. Cependant, nous ne pouvons fournir de score rigoureux car cela nécessiterait une labellisation humaine.
 ### 1.4 - Extraction et découpage
-Une fois les titres labellisés, il a suffi de les sortir et d'essayer de les retrouver dans le texte HTML que nous avions à l'origine. Cette étape s'est révélé anormalement complexe et peu concluante. Un processus standard de découpage du texte entre deux titres pour chercher les paragraphes correspondant a très peu fonctionné et a semblé incapable de nous fournir, pour chaque titre, les paragraphes associés. 
+Une fois les titres labellisés, il a suffi de les sortir et d'essayer de les retrouver dans le texte HTML que nous avions à l'origine. Cette étape s'est révélé anormalement complexe et peu concluante. Un processus standard de découpage du texte entre deux titres pour chercher les paragraphes correspondant a très peu fonctionné et a semblé incapable de nous fournir, pour chaque titre, les paragraphes associés.
 
-Face à cette difficulté, 
+Face à cette difficulté,
 
 ## 2 - Traitement et analyse des enjeux
 **Objectif** : identifier les enjeux présent dans un texte de longueur variable (idéalement le plus court possible)
@@ -55,7 +56,7 @@ Pour une prise en main et utilisation rapide, voir les codes "Avis_semisupervise
 
 ### 2.1 - Algorithme, paramètres, métriques
 L'algorithme utilisé est CorEx (version adaptée pour le topic modeling, voir https://github.com/gregversteeg/corex_topic/tree/master/corextopic).
-C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests. 
+C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests.
 
 Les scripts appliquant les développements décrits plus bas sur les sections et les avis sont section_semisupervised.py et avis_semisupervised.py.
 La classe principale regroupant les techniques et développements appliqués pour améliorer le score est contenue dans topicmodeling_pipe.py.
@@ -111,7 +112,7 @@ En utilisation directe on appelle la fonction get_minority_instance(X,y) avec X 
 On récupère X_sub et y_sub, sous ensemble des documents aux labels minoritaires.
 En utilisation indirecte, dans la classe principale CorExBoosted, on appelle la méthode stratify() pour générer les attributs .X_sub et .y_sub, sinon lors du .fit l'argument optionnel stratify lance ou non la stratification (elle est systématiquement faite si on ne précise pas l'inverse)
 
-La stratification consiste ici a sélectionner les exemples (avis, paragraphe, autre...) avec les les labels les moins représentés pour augmenter leur proportion par rapport a la distribution initiale, et avoir des proportions similaires pour tous les enjeux. 
+La stratification consiste ici a sélectionner les exemples (avis, paragraphe, autre...) avec les les labels les moins représentés pour augmenter leur proportion par rapport a la distribution initiale, et avoir des proportions similaires pour tous les enjeux.
 
 L'implémentation est assez simple : on calcule pour chaque label sa fréquence d'apparition et on fait la moyenne des fréquences : tous les labels sous représentés par rapport a la moyenne sont considérés comme minoritaires. On récupère ensuite un sous ensemble des données correspondant aux documents contenant au moins un enjeu minoritaire.
 
@@ -130,10 +131,10 @@ Pour pallier au problème précédent, on peux procéder à de l'augmentation de
 Initialement, l'algorithme n'enrichissait pas suffisament les labels sous représentés. Plusieurs raisons peuvent expliquer cela :
 Les données sont si pauvres en label sous représentés que trop peu d'exemples ont au moins 3 voisins avec ces labels minoritaires, donc peu de nouveaux exemples synthétiques contenant ces enjeux sont créés.
 
-**Pistes d'améliorations** :  on peut régler ce problème de deux manière : 
+**Pistes d'améliorations** :  on peut régler ce problème de deux manière :
   - Améliorer la stratification un peu plus pour continuer à uniformiser la distribution des enjeux, cela passe par de la labellisation.
   - Diminuer la sélectivité du processus d'augmentation, par exemple en autorisant, si un label est sous représenté, a considérer que la ligne synthétique contient l'enjeu si seulement 1 voisin contient le label sous représenté. Cela pourrait par contre fausser l'apprentissage. Cette solution est implémentée avec MLSMOTE2 (MLSMOTE est l'algorithme initial décrit dans l'article précédent).
- 
+
 ### 2.4 - Bagging et boosting
 **Objectif** : améliorer les performances globales
 **Approches** : Bagging simple, boosting
@@ -146,7 +147,7 @@ Pour améliorer cela, on fait du bagging : on entraine un grand nombre de modèl
 Via la classe principale CorExBoosted, utiliser l'argument n_classif du .fit() ! n_classif correspond au nombre d'instances de CorEx qui vont êtres entrainées.
 Si on ne stratifie pas et qu'on augmente pas les données, tout est entrainé sur le corpus de base
 Si on stratifie sans augmenter, tout est entrainé sur le sous ensemble des documents aux labels minoritaires
-Si on stratifie et qu'on augmente, chaque classifieur est entrainé sur un dataset augmenté différent. 
+Si on stratifie et qu'on augmente, chaque classifieur est entrainé sur un dataset augmenté différent.
 
 Les performances sont légèrement meilleures (on augmente le F1 score moyen de 0,05), et cela diminue grandement la variance.
 Un paramètre qui est ajouté par cette approche est la sélectivité du modèle : normalement, CorEx applique un seuil, lorsqu'il calcule la probabilité d'apparition d'un topic dans un document, si celle ci est supérieure à 0.5, il considère que l'enjeu est présent. Il est possible avec la méthode .predict() de changer la sélectivité (arg selectivity) et même de l'optimiser avec .optimize_selectivity(). Les bornes théoriques sont bien 0 et 1, mais si on n'encadre pas un peu plus finement celles ci, on peux obtenir des résultats absurdes (sélectivité de 0.005 par exemple...).
@@ -170,6 +171,15 @@ Nous développons quatre approches différentes qui sont :
 Pour des explications plus précises, voir _Note technique_ dans Theo.
 ### 3.3 - Résultats
 
+
+
+## 4 - Extraction de mots-clés
+
+**Objectifs** :
+* Extraire des mots-clés pertinents sur les sections des études d'impacts (et tout autres documents) en l'absence de données labellisées et de recul sur le meilleur modèle pour un cas d'usage donné.
+* Proposer un package directement actionnable pour toutes personnes/organisations voulant extraire des mots-clés sur un corpus de texte sans expertise prélable ni a priori sur les performances des nombreux modèles disponibles.
+
+Pour une présentation détaillée du modèle *keyBoost* qui en découle , se référer au dossier *Zakaria*. Une documentation complète est disponible dans le sous-répertoire *Docs* de *Zakaria*. Cette document retrace le contexte, l'architecture technique, la validation scientifique de la pertience de *keyBoost*, un demonstrateur web interactif ainsi qu'un tutoriel/documentation sur le package python *keyBoost*.
 
 ## 4 - Système de recommandation d'avis
 **Objectif** : formuler des recommandations d'avis correspondant à des études d'impacts similaires.
