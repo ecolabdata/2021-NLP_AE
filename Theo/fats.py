@@ -22,15 +22,15 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 import sys
 
 class Word_Cleaning():
-    '''
-    Classe permettant le nettoyage du texte.
-    @n_jobs : nombre de cpu, attention, plutôt ne pas en mettre beaucoup (2 par exemple) à cause de la mémoire.
-    @sentence : dummy pour indiquer si on coupe les paragraphes, fixé à True, doit l'être sir vous ne mettez qu'un paragraphe à la fois.
-    @threshold : dummy pour indiquer l'activation de la sélection des mots suffisamment grand, fixé à True.
-    @seuil : seuil pour la taille des mots, fixé à 2.
-    @lemma : activation de la lemmatisation, fixé à False
-    @seuil_carac : seuil pour le nombre de caractères dans la phrase, fixé à 3.
-    '''
+      '''
+      Classe permettant le nettoyage du texte.
+      @n_jobs : nombre de cpu, attention, plutôt ne pas en mettre beaucoup (2 par exemple) à cause de la mémoire.
+      @sentence : dummy pour indiquer si on coupe les paragraphes, fixé à True, doit l'être sir vous ne mettez qu'un paragraphe à la fois.
+      @threshold : dummy pour indiquer l'activation de la sélection des mots suffisamment grand, fixé à True.
+      @seuil : seuil pour la taille des mots, fixé à 2.
+      @lemma : activation de la lemmatisation, fixé à False
+      @seuil_carac : seuil pour le nombre de caractères dans la phrase, fixé à 3.
+      '''
       def __init__(self,n_jobs,sentence=False,threshold=False,seuil=None,lemma=False,seuil_carac=None):
         super(Word_Cleaning,self).__init__
         self.cpu=n_jobs
@@ -708,13 +708,33 @@ class TextRank():
       self.camem=CamembertModel(CamembertConfig())
       self.cpu=cpu
         
-   def make_embedding_bert(self,articles,camem):
+   def make_embedding_bert(self,articles,camem,seuil=70):
       if type(articles[0])==str:
          dico={}
          input_ids,att_mask=self.bert_embedding.make_token(articles,self.cpu)
-         embeddings=camem(torch.tensor(input_ids),
-               torch.tensor(att_mask))
-         embeddings=embeddings.last_hidden_state.mean(dim=1)
+            
+         if len(input_ids)>seuil: #Au-delà de 70 phrases, camembert plante. On vérifie que le paragraphe en contient moins puis
+            #on va découper le paragraphe pour que chaque bout fasse moins de 70
+            # d'abord il convient de trouver le chiffre tq len(input_ids)/chiffre<70
+            for i in range(2,100):
+                if (len(input_ids)/i)<seuil:
+                    h=i
+                    break
+                else:
+                    continue
+            #une fois qu'on a ce chiffre h on y va :
+            embeddings=[]
+            for i in range(h):
+                x_1=int(len(input_ids)*(i/h))
+                x_2=int(len(input_ids)*((i+1)/h))
+                embeddings.append(camem(torch.tensor(input_ids[x_1:x_2]),
+                   torch.tensor(att_mask[x_1:x_2])).last_hidden_state.detach())
+            embeddings=torch.cat(embeddings).mean(dim=1)
+         
+         else:
+             embeddings=camem(torch.tensor(input_ids),
+                       torch.tensor(att_mask))
+             embeddings=embeddings.last_hidden_state.detach().mean(dim=1)
          return embeddings,dico
       else:
          dico=self.bert_embedding.make_tokens(articles,self.cpu)
@@ -817,11 +837,18 @@ class BERTScore():
          self.camem=camem
          self.cosim=cosim
 
-      def make_score(self,article):
+      def make_score(self,article,k=3):
          b,_=self.make_embedding(article,self.camem)
          #b=torch.stack(b)
          VSA=b.mean(dim=0)
          score=self.cosim(VSA,b)
+         try:
+             score=score.topk(k=k)[1]
+         except:
+            try:
+                score=score.topk(k=k-1)[1]
+            except:
+                score=score.topk(k=k-2)[1]
          return score
       
       def make_summary(self,article,k=3):
@@ -1474,7 +1501,7 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
         return resu
 
 
-def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None):
+def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False):
     '''
     Fonction permettant de produire des résumés sans deep learning.
     @sequence : liste de phrases.
@@ -1487,42 +1514,48 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None):
     
     if type_=='TextRankBert':
         try:
-            TextRank=TextRank(tok_path,cpu=cpu)
-            r=partial(TextRank.make_resume,
+            TR=TextRank(tok_path,cpu=cpu)
+            fnct=partial(TR.make_resume,
                            type='bert',
                            modele=modele,
-                           k=k)
+                           k=k,
+                           get_score_only=get_score_only)
         except:
             print("Êtes-vous certain d'avoir mis le chemin du tokenizer en ayant spécifié que vous vouliez un embedding BERT ?\n Êtes-vous certain d'avoir spécifié un tokenizer correct ?")
     
     elif type_=='TextRankWord2Vec':
-        TextRank=TextRank(cpu=cpu)
-        r=partial(TextRank.make_resume,
+        TR=TextRank(cpu=cpu)
+        fnct=partial(TR.make_resume,
                         type='word2vec',
                         modele=modele,
-                        k=k)
+                        k=k,
+                        get_score_only=get_score_only)
     
     elif type_=='BertScore':
         if modele!=None:
             BS=BERTScore(tok_path,camem=modele,cpu=cpu)
         else:
             BS=BERTScore(tok_path,cpu=cpu)
-        r=partial(BS.make_summary,
+        
+        if get_score_only:
+            fnct=BS.make_score      
+        else:
+            fnct=partial(BS.make_summary,
                               k=k)
         
     elif type_=='Lead3':
-        r=partial(Lead_3,k=k)
+        fnct=partial(Lead_3,k=k)
     
     elif type_=='Random':
-        r=Random_summary
+        fnct=Random_summary
     
     else:
         raise ValueError("Il semblerait que vous n'ayez pas spécifié de type pour le résumé.\nVous pouvez spécifier les types suivants : TextRankBert,TextRankWord2Vec,BertScore,Lead3,Random")
       
-    res=r(sequence)
+    res=fnct(sequence)
     return res
 
-def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False):
+def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False):
     '''
     Fonction produisant le résumé. 
     @texte : liste de listes de phrases. Autrement dit, vous avez une liste de paragraphes, vous les tronquez à chaque point, et vous obtenez une liste de liste de phrases.
@@ -1539,9 +1572,20 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,camem=Non
     '''
     
     if DL:
-        res=make_DL_resume(texte,cpu=cpu,choose_model=choose_model,k=k,camem=camem,vs=vs,sp=sp,tok=tok,tr=tr)
+        res=make_DL_resume(texte,cpu=cpu,choose_model=choose_model,k=k,camem=camem,vs=vs,sp=sp,tok=tok,tr=tr,get_score_only=get_score_only)
         return res
     else:
-        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok)
-        res=[mur(texte[i]) for i in range(len(texte))]
-        return res
+        Text=Parallel(n_jobs=cpu)(delayed(make_text)(t) for t in texte)
+    
+        text=[Text[i][0] for i in range(len(Text))]
+        empty=[Text[i][1] for i in range(len(Text))]
+
+        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,get_score_only=get_score_only)
+        
+        if get_score_only:
+            res=[mur(t) for t in text]
+            return res
+        
+        else:
+            res=[mur(text[i]) for i in range(len(text))]
+            return res
