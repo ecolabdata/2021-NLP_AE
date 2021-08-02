@@ -99,7 +99,7 @@ def analysis_min_df(text,Thesaurus,N=15):
     import matplotlib.pyplot as plt
     plt.figure(figsize=(10,9))
     for enjeu in enjeux_list:
-        plt.plot([k for k in range(30)],cov[enjeu],label = enjeu)
+        plt.plot([k for k in range(N+1)],cov[enjeu],label = enjeu)
 
     plt.legend(loc = 1)
     plt.show()
@@ -143,7 +143,7 @@ def analysis_max_df(text,Thesaurus,N = 15):
     import matplotlib.pyplot as plt
     plt.figure(figsize=(10,9))
     for enjeu in enjeux_list:
-        plt.plot([k/100 for k in range(30)],cov[enjeu],label = enjeu)
+        plt.plot([k/100 for k in range(N+1)],cov[enjeu],label = enjeu)
 
     plt.legend(loc = 0)
     plt.show()

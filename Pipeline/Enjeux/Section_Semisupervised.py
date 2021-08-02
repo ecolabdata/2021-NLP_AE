@@ -7,7 +7,7 @@ docs_df = pickle.load(open("Data\Bagging_model\df_sections.pickle",'rb'))
 docs_df.dropna(inplace = True)
 docs_df.rename(columns = {'num_etude':'id_AAE'},inplace = True)
 Thesaurus = pickle.load(open("Data\Thesaurus_csv\Thesaurus1.pickle",'rb'))
-
+#%%
 from Pipeline.Enjeux.processing_encoding import processing_thesaurus,processing
 
 #Le préprocessing permet de lemmatiser les mots du thésaurus de la même manière que les mots du texte vont l'être (sinon ils ne seront pas reconnus)
@@ -45,6 +45,8 @@ instance.word2id,instance.words_freq,instance.vocab_sort,instance.notinvoc
 
 #On fit les classifieurs. On peux en mettre plus ou moins. La stratification et l'augmentation ne sont possible que si on dispose de données labellisées !
 instance.fit(n_classif=100,stratify=False,augment=False)
+
+pickle.dump(instance,open('Data/enjeux_section.pickle','wb'))
 # %%
 import pandas as pd
 
