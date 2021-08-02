@@ -49,12 +49,18 @@ class Word_Cleaning():
               #      trace_empty.append(i)
             while '' in text:
                   text.remove('')
+            while ' ' in text:
+                  text.remove(' ')
         elif type(text[0])==list:
             #for i in range(len(text)):
              #   if text[i]==[]:
               #      trace_empty.append(i)
             while [] in text:
                 text.remove([])
+            while [''] in text:
+                text.remove([''])
+            while [' '] in text:
+                text.remove([' '])
         return text#,trace_empty
     
       def make_sentence(self,phrases):
@@ -1402,9 +1408,17 @@ def make_text(texte,j=5,s=True,t=True,seuil=2,lem=False,sc=3):
         if (len(text[i])==0) or text[i][0]=='':
             empty.append(i)
     text=WC.remove_empty(text)
-    text=functools.reduce(operator.iconcat,text,[])
-    text=WC.remove_empty(text)
+    if s:
+        text=functools.reduce(operator.iconcat,text,[])
+        
+#     return text,empty
+#     if len(text[0])>0:
+    #text=WC.remove_empty(text)
+#     try:
+#         text=[i for i in text if ]
     return text,empty
+#     else:
+#         return text,empty
 
 def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False):
     '''
@@ -1555,7 +1569,7 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
     res=fnct(sequence)
     return res
 
-def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False):
+def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,s=True,t=True,seuil=2,lem=False,sc=3): #,camem=None
     '''
     Fonction produisant le résumé. 
     @texte : liste de listes de phrases. Autrement dit, vous avez une liste de paragraphes, vous les tronquez à chaque point, et vous obtenez une liste de liste de phrases.
@@ -1571,21 +1585,40 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,camem=Non
     @tr : dummy pour savoir si l'on entraine, ici non.    
     '''
     
+    if type(texte[0])==str:
+        if type(texte)!=list:
+            texte=[i.split('.') for i in texte.tolist()]
+        else:
+            texte=[i.split('.') for i in texte]
+    
+    
+    
     if DL:
-        res=make_DL_resume(texte,cpu=cpu,choose_model=choose_model,k=k,camem=camem,vs=vs,sp=sp,tok=tok,tr=tr,get_score_only=get_score_only)
+        res=make_DL_resume(texte,cpu=cpu,choose_model=choose_model,k=k,camem=modele,vs=vs,sp=sp,tok=tok,tr=tr,get_score_only=get_score_only)
         return res
+    
+    
+    
     else:
-        Text=Parallel(n_jobs=cpu)(delayed(make_text)(t) for t in texte)
+        mk=partial(make_text,j=cpu,s=s,t=t,seuil=seuil,lem=lem,sc=sc)
+        Text=Parallel(n_jobs=cpu)(delayed(mk)(t) for t in texte)
     
         text=[Text[i][0] for i in range(len(Text))]
+        WC=Word_Cleaning(n_jobs=cpu,#Pas trop, attention à la mémoire attribuée à chaque worker !
+                sentence=s, #est-ce qu'on coupe ce qu'il y a dans la liste pour en faire des phrases ? Oui
+                threshold=t, #On active la sélection de mots suffisamment grand
+                seuil=seuil, #seuil pour la taille des mots
+                lemma=lem, #est-ce qu'on lemmatise ?
+                seuil_carac=sc)
+        text=WC.remove_empty(text)
         empty=[Text[i][1] for i in range(len(Text))]
 
         mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,get_score_only=get_score_only)
         
         if get_score_only:
             res=[mur(t) for t in text]
-            return res
+            return res,text
         
         else:
             res=[mur(text[i]) for i in range(len(text))]
-            return res
+            return res,text
