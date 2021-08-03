@@ -38,7 +38,6 @@ def scores(y_pred,y_true,labels):
         if TP==0:
             Pre,Rec,F1 = 0,0,0
         reslabel[label] = [Acc,Pre,Rec,F1]
-        print(label, reslabel[label])
     return(reslabel)
 
 def hotgrid_score(labels,results,col = 'hot'):
@@ -240,5 +239,6 @@ def tqdm_joblib(tqdm_object):
     finally:
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close() 
+
 
 # %%
