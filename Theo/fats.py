@@ -717,8 +717,10 @@ class TextRank():
    def make_embedding_bert(self,articles,camem,seuil=70):
       if type(articles[0])==str:
          dico={}
+        #  start=time()
          input_ids,att_mask=self.bert_embedding.make_token(articles,self.cpu)
-            
+        #  end_1=time()
+        #  print("Les tokens ont pris :",round((end_1-start)/60,2),"minutes.")
          if len(input_ids)>seuil: #Au-delà de 70 phrases, camembert plante. On vérifie que le paragraphe en contient moins puis
             #on va découper le paragraphe pour que chaque bout fasse moins de 70
             # d'abord il convient de trouver le chiffre tq len(input_ids)/chiffre<70
@@ -741,12 +743,21 @@ class TextRank():
              embeddings=camem(torch.tensor(input_ids),
                        torch.tensor(att_mask))
              embeddings=embeddings.last_hidden_state.detach().mean(dim=1)
+         
+        #  end_2=time()
+        #  print("L'embedding a pris :",round((end_2-end_1)/60,2),"minutes.")
          return embeddings,dico
       else:
+        #  start=time()
          dico=self.bert_embedding.make_tokens(articles,self.cpu)
          input_ids=dico['input_ids']
          att_mask=dico['attention_mask']
+        #  end_1=time()
+        #  print("Les tokens ont pris :",round((end_1-start)/60,2),"minutes.")
+         
          embeddings=self.bert_embedding.emb_phrase(input_ids,att_mask,camem)
+        #  end_2=time()
+        #  print("L'embedding a pris :",round((end_2-end_1)/60,2),"minutes.")
          return embeddings,dico
    
    @staticmethod
@@ -792,9 +803,9 @@ class TextRank():
       rank=[s[0] for s in rank]
       return rank
    
-   def make_resume(self,article,type,modele,k=3,verbose=1,get_score=False,get_score_only=False):
+   def make_resume(self,article,type,modele,k=3,verbose=1,get_score=False,get_score_only=False,s=70):
       if type=='bert':
-         b,d=self.make_embedding_bert(article,modele)
+         b,d=self.make_embedding_bert(article,modele,seuil=s)
          mb=self.mat_sim(b)#[self.mat_sim(h) for h in b]
          sb=self.scores(mb,k=k)#[self.scores(m,k=k) for m in mb]
          if get_score:
@@ -843,11 +854,18 @@ class BERTScore():
          self.camem=camem
          self.cosim=cosim
 
-      def make_score(self,article,k=3):
-         b,_=self.make_embedding(article,self.camem)
+      def make_score(self,article,k=3,s=70):
+        #  start=time()
+         b,_=self.make_embedding(article,self.camem,seuil=s)
+        #  end_1=time()
+        #  print("L'embedding a pris :",round((end_1-start)/60,2))
          #b=torch.stack(b)
          VSA=b.mean(dim=0)
+        #  end_2=time()
+        #  print("Le calcul a pris :",round((end_1-end_2)/60,2))
          score=self.cosim(VSA,b)
+        #  end_2=time()
+        #  print("Le calcul de similarité a pris :",round((end_2-end_1)/60,2))
          try:
              score=score.topk(k=k)[1]
          except:
@@ -855,6 +873,8 @@ class BERTScore():
                 score=score.topk(k=k-1)[1]
             except:
                 score=score.topk(k=k-2)[1]
+        #  end_3=time()
+        #  print("La récupération des scores a pris :",round((end_3-end_2)/60,2))
          return score
       
       def make_summary(self,article,k=3):
@@ -1515,7 +1535,7 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
         return resu
 
 
-def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False):
+def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False,seuil=70):
     '''
     Fonction permettant de produire des résumés sans deep learning.
     @sequence : liste de phrases.
@@ -1533,7 +1553,8 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
                            type='bert',
                            modele=modele,
                            k=k,
-                           get_score_only=get_score_only)
+                           get_score_only=get_score_only,
+                           s=seuil)
         except:
             print("Êtes-vous certain d'avoir mis le chemin du tokenizer en ayant spécifié que vous vouliez un embedding BERT ?\n Êtes-vous certain d'avoir spécifié un tokenizer correct ?")
     
@@ -1600,6 +1621,7 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,
     
     
     else:
+        start_time=time()
         mk=partial(make_text,j=cpu,s=s,t=t,seuil=seuil,lem=lem,sc=sc)
         Text=Parallel(n_jobs=cpu)(delayed(mk)(t) for t in texte)
     
@@ -1612,13 +1634,18 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,
                 seuil_carac=sc)
         text=WC.remove_empty(text)
         empty=[Text[i][1] for i in range(len(Text))]
-
+        end_time=time()
+        print("Le processing du text a pris :",round((end_time-start_time)/60,2),"minutes")
         mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,get_score_only=get_score_only)
         
         if get_score_only:
             res=[mur(t) for t in text]
+            end_2=time()
+            print("La production des résumés a pris :",round((end_2-end_time)/60,2),"minutes")
             return res,text
         
         else:
             res=[mur(text[i]) for i in range(len(text))]
+            end_2=time()
+            print("La production des résumés a pris :",round((end_2-end_time)/60,2),"minutes")
             return res,text
