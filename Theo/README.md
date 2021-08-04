@@ -37,12 +37,22 @@ Une fois que cela est fait, vous pouvez lancer les exemples.
 Vous pourrez de même introduire vos propres données (attention au format et à la dimension, mais cela est indiqué dans les pipelines).
 
 ## L'approche du résumé automatique
+
+petite intro
+
 ### 1. Les approches et les méthodes associées
+
+* **1.1** Une famille de modèles basées sur du __Deep Learning__
+* **1.2** Un modèle utilisant l'algorithme TextRank
+* **1.3** Un modèle basé sur la similarité de l'embedding des phrases
+* **1.4** Enfin une famille de modèle __benchmark__ pour la comparaison
+
 #### 1.1 - Deep Learning Oriented Extractive Summarizer (DLOES)
 #### 1.2 - TextRank for Extractive Summarizer (TRES)
 #### 1.3 - BertScore
 #### 1.4 - Lead-3 et RandomSummary
-### 3. Résultats 
+
+### 2. Résultats 
 
 ## Citation
 
