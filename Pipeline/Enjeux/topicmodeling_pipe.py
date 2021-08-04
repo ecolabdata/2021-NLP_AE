@@ -204,6 +204,21 @@ class CorExBoosted():
         from scipy.optimize import minimize_scalar
         return minimize_scalar(self.loss_select, method = 'bounded',bounds = bnds)
 
+    def format_results(self,results):
+        """
+        results = matrice numpy de True/False des résultats
+        renvoie une liste de listes des enjeux pour chaque doc
+        """
+        enjeux = self.Thesaurus.Enjeux.values
+        resultats_liste = []
+        for doc in results:
+            doc_res = []
+            for k in range(len(doc)):
+                if doc[k] ==True:
+                    doc_res.append(enjeux[k])
+            resultats_liste.append(doc_res)
+        return(resultats_liste)
+
     def extract_topics(self,sections):
         """
         Fonction permettant d'extraire directement les topics a partir d'une array ou
@@ -219,8 +234,7 @@ class CorExBoosted():
         sections = [processing(section) for section in tqdm(sections)]
         process = self.vectorizer.transform(sections)
         X = process.toarray().astype(int)
-        return(self.predict(X))
+        return(self.format_results(self.predict(X)))
 
-    
 
 # %%
