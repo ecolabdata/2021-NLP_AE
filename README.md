@@ -193,3 +193,4 @@ Pour une présentation détaillée du modèle *keyBoost* qui en découle , se r�
 Ruben Partouche : ruben.partouche@student-cs.fr  
 Théo Roudil-Valentin : theo.roudil-valentin@ensae.fr  
 Zakaria Bekkar : zakaria.bekkar@ens-paris-saclay.fr  
+
