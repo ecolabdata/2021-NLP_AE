@@ -21,9 +21,25 @@ Ce dossier contient deux dossiers :
 
 ## Prise en main 
 
+Pour prendre en main ce dossier vous devez :
+* **1.** d'abord cloner le repository en local (dans votre invite de commandes windows, mettez vous dans votre dossier choisi et entrez git clone https://github.com/ecolabdata/2021-NLP_AE.git , attention au proxy si vous êtes au bureau 😉 ! ) ;
+* **2.** avoir installé une version de python (conseil : la 3.6.7 64-bit) ;
+* (**2.1** conseil également : créez-vous un environnement virtuel, c'est plus sain, vous pouvez chercher sur le net c'est assez direct.) ;
+* **3.** avoir installé une interface python : par exemple Jupyter (classique), je conseille VS Code, qui est vraiment très utile, agréable et polyvalent ;
+* **4.** avoir installé les packages du document __requirements.txt__ disponible ;
+
+Une fois que vous avez fait cela, vous avez (normalement) tout bon pour lancer le projet et ses exemples.
+Vous pouvez alors ouvrir votre interface python (Jupyter, VS Code ou autre), puis lancer les cellules (Ctrl + Enter ou shift + enter).
+Vous devrez probablement à un moment donné renseigner votre chemin vers votre dossier ou vous avez téléchargé les données, l'emplacement sera indiqué directement dans le code. N'oubliez cependant pas que tous les '\' doivent être soit remplacés par des '\\' ou des '/' ! Sinon python ne pourra pas trouver le chemin.
+
+Une fois que cela est fait, vous pouvez lancer les exemples.
+Vous pourrez de même introduire vos propres données (attention au format et à la dimension, mais cela est indiqué dans les pipelines).
+
 ## L'approche du résumé automatique
 ### 1. Les approches 
 ### 2. La méthode
 ### 3. Résultats 
+
+## Citation
 
 ## Sources :
