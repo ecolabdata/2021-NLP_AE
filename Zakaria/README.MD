@@ -35,7 +35,7 @@ Chargé d'appliquer l'extraction de mots clés aux sections des études d'impact
 
 C'est là qu'intervient keyBoost. Comme brièvement exposé ci-dessus, cet outil fonctionne sur la base des mots-clés générés par un ensemble de modèles triés sur le volet et sélectionne les plus pertinents via un consensus qui peut intuitivement ressembler à un vote. Pour le moment, il existe deux types de mécanismes de consensus :
 
-* *Consensus statistique* qui traite les scores issus des modèles afin de constituer un ensemble de mots-clés pertinents, de *mode cardinal*.
+* *Consensus statistique* qui traite les scores issus des modèles afin de constituer un ensemble de mots-clés pertinents, de manière *cardinale*.
 * *Le consensus basé sur le classement* s'appuie directement et très simplement sur le classement pour générer son choix, de manière *ordinale*.
 
 Une prochaine version ajoutera la possibilité de prendre en compte le *feedback utilisateur* comme information directrice pour ce consensus.
