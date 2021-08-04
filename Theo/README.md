@@ -19,4 +19,11 @@ Ce dossier contient deux dossiers :
 * __pipeline_DL.ipynb__ :
 * __fats.py__ : fichier **module**, c'est-à-dire comportant l'aboutissement de tout le travail fonctionnel sur le résumé. Il rassemble toutes les fonctions utiles pour cela. Il est appelé très souvent au sein des codes aboutis, donc pensez à bien le mettre dans votre dossier.
 
+## Prise en main 
+
+## L'approche du résumé automatique
+### 1. Les approches 
+### 2. La méthode
+### 3. Résultats 
+
 ## Sources :
