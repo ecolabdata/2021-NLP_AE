@@ -32,7 +32,7 @@ Pour prendre en main ce dossier vous devez :
 Une fois que vous avez fait cela, vous avez (normalement) tout bon pour lancer le projet et ses exemples.  
 Vous pouvez alors ouvrir votre interface python (Jupyter, VS Code ou autre), puis lancer les cellules (Ctrl + Enter ou shift + enter).  
 Vous devrez probablement à un moment donné renseigner votre chemin vers votre dossier ou vous avez téléchargé les données, l'emplacement sera indiqué directement dans le code.  
-N'oubliez cependant pas que tous les '\\' doivent être soit remplacés par des '\\\' ou des '/' ! Sinon python ne pourra pas trouver le chemin.  
+N'oubliez cependant pas que tous les '\\' doivent être soit remplacés par des '\\\\' ou des '/' ! Sinon python ne pourra pas trouver le chemin.  
 
 Une fois que cela est fait, vous pouvez lancer les exemples.  
 Vous pourrez de même introduire vos propres données (attention au format et à la dimension, mais cela est indiqué dans les pipelines).
