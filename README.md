@@ -164,19 +164,16 @@ Déjà testé : scipy.optimize.minimize pour minimiser la Hamming Loss, la Ranki
 
 ## 3 - Résumé automatique de sections
 **Objectif** : effectuer du résumé extractif (sélection des phrases pertinentes) sur les sections des études d'impacts.
-### 3.1 - Approches
+
+Vous trouverez l'ensemble des travaux opérationnels et exploratoires dans le dossier Théo.
+ 
 Nous développons quatre approches différentes qui sont :
 * Une famille de modèles basées sur du __Deep Learning__
 * Un modèle utilisant l'algorithme TextRank
 * Un modèle basé sur la similarité de l'embedding des phrases
 * Enfin une famille de modèle __benchmark__ pour la comparaison
 
-L'ensemble des ces modèles sont appelables via les fonctions disponibles dans le code __fats.py__ dans le dossier Théo.
-### 3.2 - Un peu de méthode
-Pour des explications précises et formelles, voir _Note technique_ dans Theo.
-### 3.3 - Résultats
-
-
+Veuillez vous référer au dossier Théo pour y lire la note technique, ainsi qu'une explication plus précise et formelle dans le README disponible.
 
 ## 4 - Extraction de mots-clés
 
