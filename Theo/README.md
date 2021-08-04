@@ -22,7 +22,7 @@ Ce dossier contient deux dossiers :
 ## Prise en main 
 
 Pour prendre en main ce dossier vous devez :
-* **1.** d'abord cloner le repository en local (dans votre invite de commandes windows, mettez vous dans votre dossier choisi et entrez git clone https://github.com/ecolabdata/2021-NLP_AE.git , attention au proxy si vous êtes au bureau 😉 ! ) ;
+* **1.** d'abord cloner le repository en local (dans votre invite de commandes windows, mettez vous dans votre dossier choisi et entrez : **git clone https://github.com/ecolabdata/2021-NLP_AE.git** , attention au proxy si vous êtes au bureau 😉 ! ) ;
 * **2.** avoir installé une version de python (conseil : la 3.6.7 64-bit) ;
 * (**2.1** conseil également : créez-vous un environnement virtuel, c'est plus sain, vous pouvez chercher sur le net c'est assez direct.) ;
 * **3.** avoir installé une interface python : par exemple Jupyter (classique), je conseille VS Code, qui est vraiment très utile, agréable et polyvalent ;
