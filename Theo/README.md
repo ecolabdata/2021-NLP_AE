@@ -57,12 +57,21 @@ C'est pourquoi nous avons enlevé les éléments suivants :
 
 #### 1.1 - Deep Learning Oriented Extractive Summarizer (DLOES)
 Ces dernières années, les techniques de Deep Learning appliquées au traitement du langage naturel se sont largement développés et proposent des outils désormais très puissants. Dans cette même veine, l'Ecolab a décidé de tenter la création d'un modèle de Deep Learning pour extraire les phrases importantes d'un paragraphe.  
-Cela passe par plusieurs étapes :
+
+Le travail débute par plusieurs étapes de pre-processing :
 
 1. Tout d'abord, il convient __tokenizer__ les mots, c'est-à-dire de les couper en bouts (des __tokens__) encore plus petits. Pour cela on utiliser un _tokenizer_, c'est-à-dire un modèle capable de repérer et découper les mots au bonne endroit. 
 2. Ensuite, nous avons transformé ces listes de tokens en vecteur via un _embedding_, celui du modèle [CamemBERT](https://huggingface.co/transformers/model_doc/camembert.html).
 3. Une fois ces représentations des phrases sous forme de vecteur récupérées, nous pouvons les introduire dans les différents modèles de DL que nous avons construit.
-4. 
+
+Ces modèles sont au nombre de 4. Ils sont relativement rudimentaires, par manque de temps, mais proposent et utilisent, pour certains, des méthodes assez modernes.  
+
+* **Simple Linear Model** :
+* **Multi Linear Model** :
+* **Convolutional Network** :
+* **SelfMultiHeadAttention Model** :
+
+
 #### 1.2 - TextRank for Extractive Summarizer (TRES)
 #### 1.3 - BertScore
 #### 1.4 - Lead-3 et RandomSummary
