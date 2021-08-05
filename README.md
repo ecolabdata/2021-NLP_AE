@@ -6,6 +6,11 @@ Vous pourrez trouver ici les codes finis et les codes exploratoires produits par
 
 ## Objectif : produire des outils, via du Machine Learning et du Natural Language Processing, pour aider les auditeurs qui élaborent les avis sur les études d'impact environnemental.
 
+
+<p align = 'center'> <img src="chaine.png"/> </p>
+
+
+
 En juin, le projet est divisé en plusieurs parties :
 1. une première partie sur la détection et l'extraction des sommaire de documents PDF, puis leur découpage;
 2. une partie sur le traitement et l'analyse des enjeux (via du **topic modelling**);
