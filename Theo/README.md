@@ -60,7 +60,7 @@ Ces dernières années, les techniques de Deep Learning appliquées au traitemen
 
 Le travail débute par plusieurs étapes de pre-processing :
 
-1. Tout d'abord, il convient __tokenizer__ les mots, c'est-à-dire de les couper en bouts (des __tokens__) encore plus petits. Pour cela on utiliser un [_tokenizer_](https://github.com/google/sentencepiece), c'est-à-dire un modèle capable de repérer et découper les mots au bonne endroit. 
+1. Tout d'abord, il convient __tokenizer__ les mots, c'est-à-dire de les couper en bouts (des __tokens__) encore plus petits. Pour cela on utilise un [_tokenizer_](https://github.com/google/sentencepiece), c'est-à-dire un modèle capable de repérer et découper les mots au bonne endroit. 
 2. Ensuite, nous avons transformé ces listes de tokens en vecteur via un _embedding_, celui du modèle [CamemBERT](https://huggingface.co/transformers/model_doc/camembert.html).
 3. Une fois ces représentations des phrases sous forme de vecteur récupérées, nous pouvons les introduire dans les différents modèles de DL que nous avons construit.
 
@@ -85,5 +85,5 @@ Les modèles sont entraînés sur les données [MLSUM](https://github.com/huggin
 
 ## Sources :
 [Camembert: a tasty french language model](https://arxiv.org/abs/1911.03894)  
-[SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226)
+[SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226)  
 [MLSUM: The Multilingual Summarization Corpus](https://arxiv.org/abs/2004.14900)
