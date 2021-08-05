@@ -1,4 +1,25 @@
 
+# Dossier Ruben - Analyse des enjeux
+
+Date de la dernière modification : **05/08/2021**
+
+Bienvenue dans le dossier de Ruben Partouche contenant les exemples d'utilisation des codes présents dans Pipeline/Enjeux
+
+**Pipeline.Enjeux.topicemodeling_pipe.py**  
+Code principal contenant la classe CorExBoosted qui encapsule un certain nombre d'améliorations utiles sur notre problème.
+
+## Listes des codes et applications :
+
+* __Avis_Semisupervised.py__ : code d'exécution des pipelines sur les Avis, avec notamment l'utilisation de données corrigées pour stratifier et augmenter les données artificiellement.
+* __Section_Semisupervised.py__ : code d'exécution des pipelines sur les Sections découpées (impropres)
+* __Enrichissement_explo.py__ : code exploratoire définissant des métriques pour enrichir le thésaurus
+* __compute_mots_finale_Theo_Ruben.py__ : obsolète ! ancien script Dataiku pour réunir des résultats non supervisés de topic modeling
+
+## L'approche de l'analyse des enjeux
+En non supervisé, nous avons testé plusieurs approches de topic modeling (LDA, LSA, word2vec + Kmeans, etc...) qui n'ont pas été concluantes car les résultats étaient trop peu utiles et pertinents du point de vue métier.
+
+On a donc ramené le problème a celui d'une classification multiclasse et multilabel, en utilisant un algorithme semi-supervisé, dans le sens ou il ne prend pas en entrée la "cible" pour s'orienter, mais un thésaurus (dictionnaire de mots associés aux enjeux).
+
 ### 2.1 - Algorithme, paramètres, métriques
 L'algorithme utilisé est CorEx (version adaptée pour le topic modeling, voir https://github.com/gregversteeg/corex_topic/tree/master/corextopic).
 C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests.
