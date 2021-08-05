@@ -21,6 +21,7 @@ Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bre
 4. [l'extraction de mots-clés (via du **Deep Learning**,**Graphs** et approches **Statistiques** *non supervisées*)](#motscles)
 
 Enfin, une autre fonctionnalité développée est :
+
 5. [un système de recommandation d'avis (fondé sur du **Deep Learning** et du **Collaborative Filtering** notamment )](#recommandation)
 
 De manière visuelle, le pipeline du projet de __synthèse augmentée__ se présente comme suit :
