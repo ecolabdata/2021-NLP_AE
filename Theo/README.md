@@ -9,9 +9,8 @@ Vous trouverez tous les éléments de codes permettant de produire des résumés
 **French Automatic Text Summarizer (fats)**  
 Le code __fats.py__ est le module regroupant un ensemble de classes et fonctions lié au projet notamment pour le nettoyage, la préparation du texte et le développement et l'application des modèles. Il est indispensable pour tous les fichiers qui se trouvent dans ce dossier. 
 
-Ce dossier contient deux dossiers :
-* **Exploration** : il contient l'ensemble des codes préliminaires qui ont amené au travail abouti que vous avez ci plus haut. Je les laisse à but informatif et de compréhension.
-* **Model** : contient les modèles pour faire tourner correctement les pipelines et plus généralement les fonctions de résumé.
+Ce dossier contient des codes et un dossier :
+* **Exploration** : qui contient l'ensemble des codes préliminaires qui ont amené au travail abouti que vous avez ci plus haut. Je les laisse à but informatif et de compréhension.
 
 ## Listes des codes et applications :
 
