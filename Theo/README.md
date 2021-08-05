@@ -60,17 +60,20 @@ Ces dernières années, les techniques de Deep Learning appliquées au traitemen
 
 Le travail débute par plusieurs étapes de pre-processing :
 
-1. Tout d'abord, il convient __tokenizer__ les mots, c'est-à-dire de les couper en bouts (des __tokens__) encore plus petits. Pour cela on utiliser un _tokenizer_, c'est-à-dire un modèle capable de repérer et découper les mots au bonne endroit. 
+1. Tout d'abord, il convient __tokenizer__ les mots, c'est-à-dire de les couper en bouts (des __tokens__) encore plus petits. Pour cela on utiliser un [_tokenizer_](https://github.com/google/sentencepiece), c'est-à-dire un modèle capable de repérer et découper les mots au bonne endroit. 
 2. Ensuite, nous avons transformé ces listes de tokens en vecteur via un _embedding_, celui du modèle [CamemBERT](https://huggingface.co/transformers/model_doc/camembert.html).
 3. Une fois ces représentations des phrases sous forme de vecteur récupérées, nous pouvons les introduire dans les différents modèles de DL que nous avons construit.
 
-Ces modèles sont au nombre de 4. Ils sont relativement rudimentaires, par manque de temps, mais proposent et utilisent, pour certains, des méthodes assez modernes.  
+Ces modèles sont au nombre de 4. Ils sont relativement rudimentaires, par manque de temps, mais proposent et utilisent, pour certains, des méthodes assez modernes. Ils sont tous écrits en [torch](https://pytorch.org/) et sont tous disponibles dans le module __fats.py__ présenté plus haut.
 
-* **Simple Linear Model** :
-* **Multi Linear Model** :
-* **Convolutional Network** :
-* **SelfMultiHeadAttention Model** :
+* **Simple Linear Model** : une structure d'une seule couche linéaire suivie d'une LeakyRelu.
+* **Multi Linear Model** : trois couches linéaires successives, dont les deux premières sont suivies d'une Softmax.
+* **Convolutional Network** : une première couche de convolution (1D) suivie d'une LeakyRelu et d'un pooling, une deuxième convolution (1D) toujours associée à un LeakyRelu, deux couches linéaires et LeakyRelu pour finir sur une linéaire.
+* **SelfMultiHeadAttention Model** : une couche de Self Multi Head Attention suivie d'une LayerNormalization, puis de deux couches linéaires toutes deux suivies d'une LeakyRelu
 
+La fonction de perte est une perte L1 re-pondérée pour sur-pondérer les tokens de début de phrases importantes, qui sont donc généralement 3 sur une dimension de 512. Leur faible nombre m'a poussé à les surpondérer pour faire en sorte que le modèle se concentre sur ces tokens. 
+
+Les modèles sont entraînés sur les données [MLSUM](https://github.com/huggingface/datasets/tree/master/datasets/mlsum), sur des batch de taille 64, sur un GPU NVIDIA disponible sur le datalab [Onyxia](https://datalab.sspcloud.fr/home) du [SSP Cloud](https://www.sspcloud.fr/).
 
 #### 1.2 - TextRank for Extractive Summarizer (TRES)
 #### 1.3 - BertScore
@@ -81,4 +84,6 @@ Ces modèles sont au nombre de 4. Ils sont relativement rudimentaires, par manqu
 ## Citation
 
 ## Sources :
-*[Camembert: a tasty french language model](https://arxiv.org/abs/1911.03894)
+[Camembert: a tasty french language model](https://arxiv.org/abs/1911.03894)  
+[SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226)
+[MLSUM: The Multilingual Summarization Corpus](https://arxiv.org/abs/2004.14900)
