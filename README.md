@@ -9,22 +9,23 @@ Vous pourrez trouver ici les codes finis et les codes exploratoires produits par
 Les auditeurs de la DREAL, Bretagne en l'occurrence, doivent analyser et rendre un avis environnemental sur des études d'impacts. Ces études sont parfois très longues (en moyenne 300 pages, avec un écart-type de 400, certaines études font plus de 1000 pages) et contiennent de nombreuses annexes (plans, photos etc...).  
 L'objectif de ce projet est de produire un outil, la __synthèse augmentée__, permettant d'avoir accès à un document court présentant les informations importantes de chaque paragraphe d'un document long et dense en information. Cette synthèse permet donc de jeter un coup d'oeil transversal rapide sur l'ensemble de l'étude, mais aussi d'y revenir lors du temps de l'analyse, de pouvoir comparer plus aisément au sein du même document mais aussi entre documents.  
 
-Ce document synthétique se présente sous la forme d'un sommaire, où pour chaque titre est associé trois éléments : les enjeux importants ([Ruben](#2-traitement-et-analyse-des-enjeux), un résumé [Theo](#3-resume-automatique-de-sections) ainsi que des mots clés [Zakaria](#markdown-header). 
+Ce document synthétique se présente sous la forme d'un sommaire, où pour chaque titre est associé trois éléments : les enjeux importants, un résumé ainsi que des mots clés. Ce sommaire sera à terme navigable.
 
 L'ensemble des travaux développés sont ré-utilisables et applicables à tout type de document, modulo un ré-entraînement potentiel pour une meilleure adéquation avec le corpus considéré. C'est d'ailleurs dans cet esprit que nous avons travaillé sur ce projet : permettre une bonne généralisation.
 
-Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bretagne.  
+Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bretagne, qui suivent un processus en plusieurs étapes :
+
+1. [la détection et l'extraction des sommaire de documents PDF, puis le découpage des sections](#sommaire) ;
+2. [le traitement et l'analyse des enjeux (via du **topic modelling**)](#enjeux);
+3. [le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*)](#resume).
+4. [l'extraction de mots-clés (via du **Deep Learning**,**Graphs** et approches **Statistiques** *non supervisées*)](#motscles)
+
+Enfin, une autre fonctionnalité développée est :
+5. [un système de recommandation d'avis (fondé sur du **Deep Learning** et du **Collaborative Filtering** notamment )](#recommandation)
+
+De manière visuelle, le pipeline du projet de __synthèse augmentée__ se présente comme suit :
 
 <p align = 'center'> <img src="chaine.png"/> </p>
-
-
-
-En juin, le projet est divisé en plusieurs parties :
-1. une première partie sur la détection et l'extraction des sommaire de documents PDF, puis leur découpage;
-2. une partie sur le traitement et l'analyse des enjeux (via du **topic modelling**);
-3. une partie sur le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*).
-4. une partie sur l'extraction de mots-clés (via du **Deep Learning**,**Graphs** et approches **Statistiques** *non supervisées*)
-4. une dernière partie sur un système de recommandation d'avis (fondé sur du **Deep Learning** et du **Collaborative Filtering** notamment )
 
 Pour le moment, il existe quatres dossiers :
 * **Pipeline** : qui correspond aux chemins d'exécutions des travaux ayant été exécutés sur Dataiku. Notamment, l'analyse des enjeux, la détection et l'extraction des sommaires, le découpage des documents; la détection des avis vides.
@@ -32,10 +33,11 @@ Pour le moment, il existe quatres dossiers :
 * **Theo** : tous les codes _exploratoires_ de Théo Roudil-Valentin (@TheoRoudilValentin).
 * **Zakaria** : tous les codes ainsi que la documentation liés à l'extraction de mots-clés et à la recommandation d'avis (@IIZCODEII).
 
-Ces codes exploratoires sont parfois flous pour des personnes extérieures au projet, mais cela est normal. Les codes finaux seront mis dans **Pipeline** et expliqués par des documents et par des précisions dans le code lui-même.
+Ces codes exploratoires sont parfois flous pour des personnes extérieures au projet, mais cela est normal. Les codes finaux seront mis dans **Pipeline** et expliqués par des documents et par des précisions dans le code lui-même. Les codes exploratoires sont laissés à but informatif.
 
 Pour setup le projet, il faut exécuter le script setup.py depuis la racine du projet (2021-NLP_AE) qui va aussi chercher les dernières données (environ 10Go) sur le disque partagé du SRI (le renommer en K si ce n'est pas le cas pour votre ordinateur). Attention : pour le moment le setup va juste identifier les noms de fichier sans comparer le contenu : il faut supprimer les fichier puis relancer setup si on veux actualiser un fichier (amélioration a faire).
 
+<a name="sommaire"/></a>
 ## 1 - Détection et extraction du sommaire
 Avant toute chose, nous avons transformés en HTML les études d'impact dont nous dispositions, à savoir les dossiers clos disponibles sur https://www.projets-environnement.gouv.fr/pages/home/ (soit environ 650 études). Pour cela, nous avons utilisé le logiciel propriétaire ABBYY Fine Reader. Sur ces 650 études, seules 150 ont été utilisables après le traitement ABBYY, cette réduction est dûe à plusieurs erreurs : mot de passe, PDF trop lourd etc...
 ### 1.1 - Construction de la base HTML
@@ -59,16 +61,124 @@ Une fois les titres labellisés, il a suffi de les sortir et d'essayer de les re
 
 Face à cette difficulté,
 
+<a name="enjeux"/></a>
 ## 2 - Traitement et analyse des enjeux
-**Objectif** : identifier les enjeux présent dans un texte de longueur variable
+**Objectif** : identifier les enjeux présent dans un texte de longueur variable (idéalement le plus court possible)
 
 En non supervisé, on a testé plusieurs approches de topic modeling (LDA, LSA, word2vec + Kmeans, etc...) qui n'ont pas été concluantes car les résultats étaient trop peu utiles et pertinents du point de vue métier.
 On a donc ramené le problème a celui d'une classification multiclasse et multilabel, en utilisant un algorithme semi-supervisé, dans le sens ou il ne prend pas en entrée la "cible" pour s'orienter, mais un thésaurus (dictionnaire de mots associés aux enjeux).
 
-Pour une prise en main et utilisation rapide, voir les codes "Avis_semisupervised.py" et "Section_semisupervised.py" qui servent d'exemple d'utilisation du pipe dans le dossier "Ruben".
+Pour une prise en main et utilisation rapide, voir les codes "Avis_semisupervised.py" et "Section_semisupervised.py" qui servent d'exemple d'utilisation du pipe.
 
-Veuillez vous référer au README.md dans le dossier "Ruben" pour plus de détail sur le fonctionnement technique et les explorations réalisées.
+### 2.1 - Algorithme, paramètres, métriques
+L'algorithme utilisé est CorEx (version adaptée pour le topic modeling, voir https://github.com/gregversteeg/corex_topic/tree/master/corextopic).
+C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests.
 
+Les scripts appliquant les développements décrits plus bas sur les sections et les avis sont section_semisupervised.py et avis_semisupervised.py.
+La classe principale regroupant les techniques et développements appliqués pour améliorer le score est contenue dans topicmodeling_pipe.py.
+
+Chaque amélioration a ses propres paramètres qui sont décrits dans chaque section. CorEx n'a, initialement, que 3 paramètres auxquels on s'est intéressés :
+Lors de l'initialisation de la classe CorEx :
+n_hidden : nombre de topics qui vont être recherchés
+Lors du fit de l'algo :
+anchor_strength : coefficient appliqué pour augmenter l'importance des ancres (dictionnaire du thésaurus) dans le modèle
+anchors : liste de listes d'ancres. Chaque liste d'ancres correspond a un dictionnaire pour un enjeu.
+
+En terme de métriques :
+Puisqu'on ne voulait pas se contenter de mesures "non-supervisées" pour obtenir un résultat vraiment intéressant du point de vue métier (auditeurs de la DREAL),
+nous avons labellisé avec une auditrice un petit nombre d'exemple (un peu moins d'une centaine) d'avis (pas de sections pour le moment !). On a donc les scores
+classiques : precision, accuracy, recall, F1.
+
+Certaines fonctions utiles ont été créées pour mieux visualiser ces scores et les effets d'altérations sur ces scores dans Pipeline.Enjeux.utils (voir notamment evaluate)
+
+Sur certaines approches (bagging et boosting notamment), ont été expérimentés d'autres métriques intéressantes pour notre problème multiclass/multilabel :
+la Hamming Loss (https://scikit-learn.org/stable/modules/generated/sklearn.metrics.hamming_loss.html) et la Label Ranking Loss (https://scikit-learn.org/stable/modules/generated/sklearn.metrics.label_ranking_loss.html). Plus de détails dans la section concernée.
+
+### 2.2 - Enrichissement
+**Objectif** : améliorer les performances par l'enrichissement du thésaurus.
+**Approches** : entrainement d'un word2vec puis calcul de similarité
+**Pistes d'améliorations** : tester d'autres métriques de similarités, trouver de nouvelles approches donnant des recommandations plus pertinentes ?
+
+#### 2.2.1 - Calcul de similarité
+**Attention** : utilisation d'un GPU très hautement recommandée pour le calcul de similarité.
+**Utilisation** :
+On appelle la classe maksimilarity de Pipeline.Enjeux.enrichissement sur le thésaurus.
+Ensuite, le .fit permet d'entrainer le modèle W2V gensim, le .transform crée des listes de vecteurs correspondant aux mots du thésaurus retrouvés dans le vocabulaire du W2V (attention aux problèmes de compatibilité selon les versions de gensim, ici tourne sur la version XX), .cos_moyen_all fait le calcul de cosimilarité (étape nécessitant du GPU), .cos_moyen_batch exécute la même tache mais en batch pour réaliser des tests.
+
+A chaque étape, le code sauvegarde automatiquement un fichier correspondant a la sortie générée (sauf le transform qui est très rapide), qu'il est possible d'utiliser lorsqu'on initialise la classe (cf aide de la classe) pour ne pas refaire certaines étapes longues (entrainement du W2V et calcul de cosimilarité).
+
+Le code est optimisé pour tourner sur gpu (via torch.cuda) et cpu mais il reste malgré tout extrêmement lent sur cpu (25 jours de traitement sur un serveur avec 64 coeurs contre 10 min sur gpu pour traiter toutes les données des avis, soit 10Mo de données).
+
+La sortie finale est une matrice (n_words,n_topic) contenant, pour chaque mot, la cosimilarité (CosineSimilarity) moyenne avec chaque vecteur de chaque topic.
+Pour avoir les mots les plus intéressants d'un topic, on regarde donc les mots avec la cosimilarité moyenne la plus forte pour ce topic.
+
+Pour le moment, les tests d'enrichissement automatisés sur les enjeux mal identifiés ne sont pas très concluants (pas d'amélioration en moyenne du score sur un modèle CorEx simple pour la Gestion des déchets sur les Avis).
+Il pourrait être intéressant de tester l'enrichissement sur des modèles en bagging ou boosting, pour éliminer la variance et voir si on constate des améliorations plus significatives en moyenne.
+Le pipeline d'enrichissement n'est pas implémenté car les tests ne sont pas concluants. Il est toutefois possible de retrouver les test dans "semisupervised_avis.py".
+
+### 2.3 - Stratification et augmentation des données
+**Objectif** : améliorer les performances sur certains labels spécifiquement.
+**Approches** : Stratification des données, augmentation des données
+Un des problèmes constatés est que les enjeux les moins représentés sont moins bien détectés par l'algorithme (performances a 0,3 en F1 contre 0,7 en moyenne).
+Pour résoudre ce souci, deux approches complémentaires ont été testées : la stratification puis l'augmentation des données.
+
+#### 2.3.1 - Stratification des données
+**Utilisation** :
+En utilisation directe on appelle la fonction get_minority_instance(X,y) avec X dataframe des documents labellisés avec leurs features, y les labels correspondants (même index pour X et y)
+On récupère X_sub et y_sub, sous ensemble des documents aux labels minoritaires.
+En utilisation indirecte, dans la classe principale CorExBoosted, on appelle la méthode stratify() pour générer les attributs .X_sub et .y_sub, sinon lors du .fit l'argument optionnel stratify lance ou non la stratification (elle est systématiquement faite si on ne précise pas l'inverse)
+
+La stratification consiste ici a sélectionner les exemples (avis, paragraphe, autre...) avec les les labels les moins représentés pour augmenter leur proportion par rapport a la distribution initiale, et avoir des proportions similaires pour tous les enjeux.
+
+L'implémentation est assez simple : on calcule pour chaque label sa fréquence d'apparition et on fait la moyenne des fréquences : tous les labels sous représentés par rapport a la moyenne sont considérés comme minoritaires. On récupère ensuite un sous ensemble des données correspondant aux documents contenant au moins un enjeu minoritaire.
+
+En revanche si des enjeux cooccurent souvent, comme c'est le cas pour la gestion des déchets avec d'autres enjeux par exemple, il sera difficile d'augmenter la proportion des enjeux sous representés pour la faire arriver au même niveau que les autres : il s'agit en fait d'un problème de machine learning en soit.
+
+**Pistes d'améliorations** : essayer une autre méthode consistant a prendre uniquement les documents qui n'ont pas un trop grand nombre de label (2 par exemple) puis équilibrer à partir de ce sous ensemble. Le vocabulaire sera potentiellement plus spécifique.
+
+#### 2.3.2 - Augmentation des données
+**Attention** : Il semble que malgré les améliorations, si on rajoute trop de samples(plus de 2 fois le nombre de samples d'origine environ), cela déséquilibre plus la distribution qu'autre chose ! Problème a confirmer/diagnostiquer mais voir explications plus bas sur son orginine supposée.
+**Utilisation** :
+En utilisation directe on appelle la fonction MLSMOTE2(X_sub,y_sub,n_samples), avec X_sub et y_sub dataframes sous ensemble des documents aux labels minoritaires, n_samples le nombre de samples a rajouter.
+En utilisation indirecte, dans la classe principale CorExBoosted, on appelle la méthode augment(n_samples = 50), sinon lors du .fit l'argument optionnel augment lance ou non l'augmentation (elle est systématiquement faite si on ne précise pas l'inverse)
+
+Pour pallier au problème précédent, on peux procéder à de l'augmentation de données qui consiste à créer artificiellement des exemples de documents avec MLSMOTE2 (MultiLabel SMOTE, voir : https://medium.com/thecyphy/handling-data-imbalance-in-multi-label-classification-mlsmote-531155416b87). L'algo sélectionne une référence qui est un élément au hasard parmis les données d'entrée, prend un de ses 5 plus proches voisins au hasard, et crée une nouvelle ligne en ajoutant une perturbation basée sur la différence entre la référence et son voisin. Si un enjeu est représenté dans au moins 3 des voisins, alors il est indiqué qu'il est présent dans l'entrée synthétique.
+
+Initialement, l'algorithme n'enrichissait pas suffisament les labels sous représentés. Plusieurs raisons peuvent expliquer cela :
+Les données sont si pauvres en label sous représentés que trop peu d'exemples ont au moins 3 voisins avec ces labels minoritaires, donc peu de nouveaux exemples synthétiques contenant ces enjeux sont créés.
+
+**Pistes d'améliorations** :  on peut régler ce problème de deux manière :
+  - Améliorer la stratification un peu plus pour continuer à uniformiser la distribution des enjeux, cela passe par de la labellisation.
+  - Diminuer la sélectivité du processus d'augmentation, par exemple en autorisant, si un label est sous représenté, a considérer que la ligne synthétique contient l'enjeu si seulement 1 voisin contient le label sous représenté. Cela pourrait par contre fausser l'apprentissage. Cette solution est implémentée avec MLSMOTE2 (MLSMOTE est l'algorithme initial décrit dans l'article précédent).
+
+### 2.4 - Bagging et boosting
+**Objectif** : améliorer les performances globales
+**Approches** : Bagging simple, boosting
+Un des problèmes constatés est la grande variance de l'algo : pour deux tests a paramètres identiques (sans random seed) on a des résultats qui peuvent être radicalement différents en terme de performance.
+Pour améliorer cela, on fait du bagging : on entraine un grand nombre de modèle pour arriver a la prédiction moyenne.
+
+
+#### 2.4.1 - Bagging
+**Utilisation** :
+Via la classe principale CorExBoosted, utiliser l'argument n_classif du .fit() ! n_classif correspond au nombre d'instances de CorEx qui vont êtres entrainées.
+Si on ne stratifie pas et qu'on augmente pas les données, tout est entrainé sur le corpus de base
+Si on stratifie sans augmenter, tout est entrainé sur le sous ensemble des documents aux labels minoritaires
+Si on stratifie et qu'on augmente, chaque classifieur est entrainé sur un dataset augmenté différent.
+
+Les performances sont légèrement meilleures (on augmente le F1 score moyen de 0,05), et cela diminue grandement la variance.
+Un paramètre qui est ajouté par cette approche est la sélectivité du modèle : normalement, CorEx applique un seuil, lorsqu'il calcule la probabilité d'apparition d'un topic dans un document, si celle ci est supérieure à 0.5, il considère que l'enjeu est présent. Il est possible avec la méthode .predict() de changer la sélectivité (arg selectivity) et même de l'optimiser avec .optimize_selectivity(). Les bornes théoriques sont bien 0 et 1, mais si on n'encadre pas un peu plus finement celles ci, on peux obtenir des résultats absurdes (sélectivité de 0.005 par exemple...).
+
+**Pistes d'améliorations** : tester ce qui se passe si on stratifie&augmente et qu'on entraine tous les classifs sur le même dataset augmenté, sinon boosting
+
+#### 2.4.2 - Boosting
+Pour aller plus loin, des approches de boosting (bagging avec coefficients en fonction des performances de modèles) doivent être testées.
+**Utilisation** : depuis la classe principale CorExBoosted, on appelle la méthode .optimize_weights(). On peux changer la méthode utilisée par scipy (voir la doc de minimize : https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html)
+
+Déjà testé : scipy.optimize.minimize pour minimiser la Hamming Loss, la Ranking Label loss, une loss "artisanale" basée sur le score F1 moyen. Pas concluant du tout, les poids ne bougent pas du tout !
+
+**Pistes d'améliorations** : Nouvelles approches ou algos a réimplémenter de zéro (AdaBoost, GradientBoost, Deep learning ?)
+
+<a name="resume"/></a>
 ## 3 - Résumé automatique de sections
 **Objectif** : effectuer du résumé extractif (sélection des phrases pertinentes) sur les sections des études d'impacts.
 
@@ -82,6 +192,7 @@ Nous développons quatre approches différentes qui sont :
 
 Veuillez vous référer au dossier Théo pour y lire la note technique, ainsi qu'une explication plus précise et formelle dans le README disponible.
 
+<a name="motscles"/></a>
 ## 4 - Extraction de mots-clés
 
 **Objectifs** :
@@ -90,6 +201,7 @@ Veuillez vous référer au dossier Théo pour y lire la note technique, ainsi qu
 
 Pour une présentation détaillée du modèle *keyBoost* qui en découle , se référer au dossier *Zakaria*. Une documentation complète est disponible dans le sous-répertoire *Docs* de *Zakaria*. Cette document retrace le contexte, l'architecture technique, la validation scientifique de la pertience de *keyBoost*, un demonstrateur web interactif ainsi qu'un tutoriel/documentation sur le package python *keyBoost*.
 
+<a name="recommandation"/></a>
 ## 4 - Système de recommandation d'avis
 **Objectif** : formuler des recommandations d'avis correspondant à des études d'impacts similaires.
 
