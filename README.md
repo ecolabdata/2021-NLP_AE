@@ -183,7 +183,7 @@ Déjà testé : scipy.optimize.minimize pour minimiser la Hamming Loss, la Ranki
 ## 3 - Résumé automatique de sections
 **Objectif** : effectuer du résumé extractif (sélection des phrases pertinentes) sur les sections des études d'impacts.
 
-Vous trouverez l'ensemble des travaux opérationnels et exploratoires dans le dossier Théo.
+Vous trouverez l'ensemble des travaux opérationnels et exploratoires dans le dossier [Théo](#https://github.com/ecolabdata/2021-NLP_AE/tree/master/Theo).
  
 Nous développons quatre approches différentes qui sont :
 * Une famille de modèles basées sur du __Deep Learning__
