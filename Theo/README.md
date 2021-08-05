@@ -84,6 +84,11 @@ Les modèles sont entraînés sur les données [MLSUM](https://github.com/huggin
 
 #### 1.2 - TextRank for Extractive Summarizer (TRES)
 #### 1.3 - BertScore
+Ce modèle propose d'extraire les phrases les plus importantes de manière rudimentaire. Comme expliqué plus haut, les phrases doivent passer par un processus pour être transformés en vecteurs. D'abord la tokenization, puis l'embedding via CamemBERT. L'idée est de choisir les phrases qui représentent le mieux l'idée générale du paragraphe. En termes vectorielles, supposons qu'il existe un vecteur qui représente parfaitement _l'idée générale_ du paragraphe, on cherche à extraire les vecteurs qui sont les plus proches de ce _vecteur idée générale_ et ainsi faire émerger les phrases les plus importantes.  
+La question désormais est : **comment obtenir ce vecteur idée générale** ? Il convient d'en chercher une approximation _suffisante_, c'est-à-dire suffisamment bonne pour que les résumés aient du sens et soient utilisables. Notre proposition est d'utiliser la moyenne des représentations vectorielles des phrases comme approximation de l'idée générale.   
+Ce modèle repose donc sur l'hypothèse suivante : **la moyenne des représentations vectorielles des phrases constitue une approximation suffisamment bonne du vecteur de l'idée générale.**
+
+
 #### 1.4 - Lead-3 et RandomSummary
 
 ### 2. Résultats 
