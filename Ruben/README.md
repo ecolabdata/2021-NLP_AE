@@ -1,5 +1,5 @@
 
-# Dossier Ruben - Analyse des enjeux
+# 2 Dossier Ruben - Analyse des enjeux
 
 Date de la dernière modification : **05/08/2021**
 
@@ -8,14 +8,14 @@ Bienvenue dans le dossier de Ruben Partouche contenant les exemples d'utilisatio
 **Pipeline.Enjeux.topicemodeling_pipe.py**  
 Code principal contenant la classe CorExBoosted qui encapsule un certain nombre d'améliorations utiles sur notre problème.
 
-## Listes des codes et applications :
+## 2.0 Listes des codes et applications :
 
 * __Avis_Semisupervised.py__ : code d'exécution des pipelines sur les Avis, avec notamment l'utilisation de données corrigées pour stratifier et augmenter les données artificiellement.
 * __Section_Semisupervised.py__ : code d'exécution des pipelines sur les Sections découpées (impropres)
 * __Enrichissement_explo.py__ : code exploratoire définissant des métriques pour enrichir le thésaurus
 * __compute_mots_finale_Theo_Ruben.py__ : obsolète ! ancien script Dataiku pour réunir des résultats non supervisés de topic modeling
 
-## L'approche de l'analyse des enjeux
+## 2.0 L'approche de l'analyse des enjeux
 En non supervisé, nous avons testé plusieurs approches de topic modeling (LDA, LSA, word2vec + Kmeans, etc...) qui n'ont pas été concluantes car les résultats étaient trop peu utiles et pertinents du point de vue métier.
 
 On a donc ramené le problème a celui d'une classification multiclasse et multilabel, en utilisant un algorithme semi-supervisé, dans le sens ou il ne prend pas en entrée la "cible" pour s'orienter, mais un thésaurus (dictionnaire de mots associés aux enjeux).
@@ -127,3 +127,10 @@ Pour aller plus loin, des approches de boosting (bagging avec coefficients en fo
 Déjà testé : scipy.optimize.minimize pour minimiser la Hamming Loss, la Ranking Label loss, une loss "artisanale" basée sur le score F1 moyen. Pas concluant du tout, les poids ne bougent pas du tout !
 
 **Pistes d'améliorations** : Nouvelles approches ou algos a réimplémenter de zéro (AdaBoost, GradientBoost, Deep learning ?)
+
+
+## 2.5 Suite du projet
+
+A la suite du projet, reste a faire :
+- Implémenter certaines des pistes données pour améliorer les performances
+- Démarrer un travail de correction des sorties sur les enjeux dans les sections pour constituer une base de donnée permettant la stratification des données sur les sections. Pour ça, exporter les sorties en excel en précisant chaque colonne, avec le texte associé, puis faire corriger le tableau aux experts métiers.
