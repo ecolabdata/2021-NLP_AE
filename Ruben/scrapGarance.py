@@ -166,3 +166,13 @@ for f,num in tqdm(zip(Etudes,dossiers)):
         shutil.copyfile(path_do+'\\'+f+'\\'+w[0]+'\\a - Dossier\\'+files[maxindex],path+'\\Etudes\\'+str(num)+'-'+files[maxindex])
     except:
         empty.append(pdf)
+
+#%%
+g = os.listdir('Data/Avis_Garance_brutTXT')
+pe = os.listdir('Data/Avis_ProjetEnv_brutTXT')
+
+g_id = [int(name[5:11]) for name in g]
+pe_id = [int(name[:-8]) for name in pe]
+inter = set(g_id)&set(pe_id)
+#Il n'y a pas d'avis de la DREAL sur PE !
+# %%

@@ -38,17 +38,21 @@ while fini == False:
     datapath = "K:\\03 ECOLAB\\2 - POC DATA et IA\Données NLP\Data\\"
     files = os.listdir(datapath)
     for file in files:
-        dataDistant = os.listdir(datapath+file)
-        dataLocal = os.listdir(CURR_DIR+file)
-        if dataDistant ==  dataLocal:
-            print(file,"déjà téléchargé")
+        path = datapath+"\\"+file
+        if os.path.isdir(path):
+            dataDistant = os.listdir(path)
+            dataLocal = os.listdir(CURR_DIR+file)
+            if dataDistant ==  dataLocal:
+                print(file,"déjà téléchargé")
+            else:
+                dataDistant = set(dataDistant)
+                dataLocal = set(dataLocal)
+                dataRestant = list(dataDistant-dataLocal)
+                print("Downloading ",file)
+                for data in tqdm.tqdm(dataRestant):
+                    shutil.copyfile(datapath+file+'\\'+data,CURR_DIR+file+'\\'+data)
         else:
-            dataDistant = set(dataDistant)
-            dataLocal = set(dataLocal)
-            dataRestant = list(dataDistant-dataLocal)
-            print("Downloading ",file)
-            for data in tqdm.tqdm(dataRestant):
-                shutil.copyfile(datapath+file+'\\'+data,CURR_DIR+file+'\\'+data)
+            shutil.copyfile(path,CURR_DIR+'\\'+file)
 
     print('\n')
     print('Vous pouvez commencer à vous amuser :-)')

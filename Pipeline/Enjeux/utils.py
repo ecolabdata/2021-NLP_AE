@@ -5,23 +5,10 @@ import numpy as np
 import pandas as pd
 import pickle
 
-Thesaurus = pickle.load(open('Data\Thesaurus_csv\Thesaurus1_clean.pickle','rb'))
+Thesaurus = pickle.load(open('Data\Enjeux\Thesaurus\Thesaurus1_clean.pickle','rb'))
 
 enjeux_list = Thesaurus.Enjeux.values.tolist()
 thesau_list = Thesaurus.Dictionnaire.values.tolist()
-
-
-corrige = pd.read_excel("Data\Workinprogress\Dataframe en correction.xlsx")
-corrige.dropna(inplace = True)
-corrige.drop(['titre', 'url_etude', 'url_avis', 'url_avis_cliquable', 'Status',
-        'Biodiversité',
-    'Paysage et qualité de vie',
-    'Santé et sécurité des personnes',
-    'Effets globaux (climat, énergie, ressources...)',
-    'Préservation des sols',
-    'Qualité de l’eau et ressource',
-    'Déplacements', 'Gestion des déchets'], axis = 1, inplace = True)
-corrige.id_AAE = corrige.id_AAE.astype(int)
 
 def scores(y_pred,y_true,labels):
     reslabel = {}
@@ -131,17 +118,20 @@ def cleanstrtobool(x):
     return(strtobool(x))
 
 
-def evaluate(docs_df,y,df_corrige = corrige,returnscore = False,showgrid = True):
+def evaluate(docs_df,y,df_corrige,returnscore = False,showgrid = True):
+    """
+    Entrées :
+    docs_df = Dataframe avec une colonne 'id_AAE'
+    y = sortie de CorEx ou CorExBoosted, sous la forme booléenne, matrice taille (n_docs,n_enjeux)
+    df_corrige = 
+    metadata = dataframe a ajouter avec une colonne 'id_AAE' pour faire la jointure, pour rajouter des informations
+    comme par exemple l'url permettant d'accéder a une étude ou un avis
+    """
+    enjeux_list = [c.replace('True_','') for c in df_corrige.columns[1:]]
     labels = pd.concat([docs_df,pd.DataFrame(y[:,:len(enjeux_list)],columns =enjeux_list)],axis=1)
-    labels.rename(columns={'id':'id_AAE'},inplace = True)
     labels.dropna(inplace = True)
-    labels.id_AAE = labels.id_AAE.astype(int)
-    etudes_avis_dep_them_id_df = pd.read_csv("Data\Workinprogress\etudes_avis_dep_them_id.csv")
-
-    final = etudes_avis_dep_them_id_df.merge(labels, on = 'id_AAE', how='inner')
-    final = final.drop(['text_processed','theme','departement'],axis = 1)
-
-    final =df_corrige.merge(final, on = 'id_AAE', how='inner')
+    labels.id_AAE = labels.id_AAE.astype(int) # Pour s'assurer que la jointure se fasse bien : même type de données
+    final =df_corrige.merge(labels, on = 'id_AAE', how='inner')
     
     y_pred = []
     y_true = []
@@ -168,40 +158,23 @@ def evaluate(docs_df,y,df_corrige = corrige,returnscore = False,showgrid = True)
     if returnscore:
         return(sc)
 
-def separate(docs_df,X,df_corrige = corrige, prediction = None):
+def separate(docs_df,X,df_corrige):
 
-
-    if prediction is not None:
-        labels = pd.concat([docs_df,pd.DataFrame(prediction[:,:len(enjeux_list)],
-        columns = enjeux_list)],axis=1)
-    else:
-        labels = docs_df
-    labels.rename(columns={'id':'id_AAE'},inplace = True)
-    labels.dropna(inplace = True)
-    labels.id_AAE = labels.id_AAE.astype(int)
-    etudes_avis_dep_them_id_df = pd.read_csv("Data\Workinprogress\etudes_avis_dep_them_id.csv")
-
-    final = etudes_avis_dep_them_id_df.merge(labels, on = 'id_AAE', how='inner')
-    final = final.drop(['text_processed'],axis = 1)
-    final['idx_copy'] = final.index
-
-    final =df_corrige.merge(final, on = 'id_AAE', how='inner')
-    
-    if prediction is not None:
-        y_pred = []
+    enjeux_list = [c.replace('True_','') for c in df_corrige.columns[1:]]
+    docs_df.dropna(inplace = True)
+    docs_df.id_AAE = docs_df.id_AAE.astype(int)
+    docs_df['idx_copy'] = docs_df.index
+    df_corrige.dropna(inplace =True)
+    final =df_corrige.merge(docs_df, on = 'id_AAE', how='inner')
+    X_df = pd.DataFrame(X,index=docs_df.idx_copy)
     y_true = []
     for enjeu in enjeux_list:
         y_true.append(final['True_'+enjeu].apply(lambda x: cleanstrtobool(x)).values)
-        if prediction is not None:
-            y_pred.append(final[enjeu].apply(lambda x : cleanstrtobool(x)).values)
+
     y_true = np.matrix(y_true).T
-    X_sub = X[final.idx_copy.values,:]
+    X_sub = X_df.loc[final.idx_copy.values]
 
-    if prediction is not None:
-        y_pred = np.matrix(y_pred).T
-
-        return(y_true,X_sub,y_pred)
-    return(y_true,X_sub)
+    return(y_true,X_sub.to_numpy())
 
 
 def topwords(model):

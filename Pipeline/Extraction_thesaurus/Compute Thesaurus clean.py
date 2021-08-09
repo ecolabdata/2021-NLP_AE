@@ -9,7 +9,7 @@ import pandas as pd, numpy as np
 import os
 # Read recipe inputs
 
-path = "Data\Thesaurus_csv\\"
+path = "Data\Enjeux\Thesaurus\\"
 versions = os.listdir(path)
 version = 0
 versions[version]
@@ -51,8 +51,7 @@ final.Dictionnaire
 
 
 import pickle
-path_clean = "Data\Thesaurus_csv"
-pickle.dump(final,open(path_clean+'\Thesaurus'+str(version)+'.pickle','wb'))
+pickle.dump(final,open(path+'\Thesaurus'+str(version)+'.pickle','wb'))
 
 
 # %%

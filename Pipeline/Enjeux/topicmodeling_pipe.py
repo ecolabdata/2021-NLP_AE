@@ -81,12 +81,12 @@ class CorExBoosted():
         #On récupère les y labellisés (vrais), et X sur les mêmes indices
         y_true,X_sub = separate(self.docs,self.X,df_corrige=df_corrige)
         y_true_df = pd.DataFrame(y_true,columns = self.enjeux_list)
-        X_df = pd.DataFrame(X_sub,columns=self.vocab)
+        X_sub_df = pd.DataFrame(X_sub,columns=self.vocab)
         from Pipeline.Enjeux.multilabel_balancing import get_minority_instance
         #Stratification a partir des éléments labellisés
         #On récupère un sous ensemble de ces X 
         # avec des proportions équilibrées pour chaque enjeu
-        self.X_sub, self.y_sub = get_minority_instance(X_df, y_true_df)
+        self.X_sub, self.y_sub = get_minority_instance(X_sub_df, y_true_df)
     
     def augment(self,n_sets,n_samples = 50):
         """

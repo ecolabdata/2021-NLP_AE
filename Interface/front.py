@@ -5,7 +5,7 @@ import pandas as pd
 
 # %%
 st.title('Sommaire Augmenté')
-df_resume = pd.read_csv(open("Data\\sections_cool_avecresume.csv",'rb'),sep=";")
+df_resume = pd.read_csv(open("Data\sections_cool_avecresume.csv",'rb'),sep=";")
 df_resume.rename(columns = {'num_etude':'id_AAE'},inplace =True)
 df_enjeux = pd.read_csv(open("Data\Workinprogress\section_test.csv",'r'),sep=";")
 
@@ -29,26 +29,34 @@ option = st.selectbox(
 study = df[df['id_AAE']==option]
 enjeux_list = study.columns[-8:]
 import ast
+from streamlit_tags import st_tags
+
 def displayrow(row,enjeux_list = enjeux_list):
+    idx = row[0]
     titre = row.titres
     resume = ast.literal_eval(row.resume)
-    enjeux = row.iloc[-8:]
+    enjeux = row.enjeux
     present = []
-    k = 0
-    for enj in enjeux:
-        if enj:
-            present.append(enjeux_list[k])
-        k = k+1
-    st.text(titre)
-    if resume[0] != 'tropcourt':
-        st.text('Résumé :')
-        for k in resume:
-            st.text(k)
-    if len(present)!=0:
-        st.text('Enjeux :')
-        for enj in present:
-            st.text(enj)
-    
+    #keywords = row.keywords
+    col1,col2 = st.beta_columns((1,15))
+    col2.markdown('## ' + titre)
+    edit = col1.checkbox('' ,key=idx,value=True)
+    if  edit:
+        present_obj = st_tags(
+        label='#### Enjeux:',
+        text='Entrée pour ajouter un enjeu',
+        value= present,
+        suggestions=enjeux_list,
+        maxtags = len(enjeux_list),
+        key=idx)
+        if resume[0] != 'tropcourt':
+            st.markdown('#### Résumé :')
+            for k in resume:
+                st.markdown('##### '+ k)
+    # if keywords != []:
+    #     st.markdown('#### Mots clef :')
+    #     for kw in keywords:
+    #         st.markdown('#####' + kw)
 #%%
 
 study.apply(displayrow,axis=1)

@@ -11,24 +11,25 @@ import scipy.sparse as ss
 from corextopic import corextopic as ct
 from Pipeline.Enjeux.utils import *
 from Pipeline.Enjeux.topicmodeling_pipe import CorExBoosted
+import os
 
 #On charge notre texte et notre thésaurus
-if os.path.isfile('Data\Workinprogress\docs_df.pickle'):
-    docs_df = pickle.load(open('Data\Workinprogress\docs_df.pickle','rb'))
+if os.path.isfile('Data\Bases_intermediaire\df_avis_clean.pickle'):
+    docs_df = pickle.load(open('Data\Bases_intermediaire\df_avis_clean.pickle','rb'))
 else:
-    docs_df = pickle.load(open("Data\Workinprogress\\base_id_avis_txt_sorted",'rb'))
+    docs_df = pickle.load(open("Data\Bases_intermediaire\\df_id_avis_txt_sorted.pickle",'rb'))
 
-if os.path.isfile('Data\Workinprogress\\modele_avis.pickle'):
-    instance = pickle.load(open('Data\Workinprogress\\modele_avis.pickle','rb'))
-Thesaurus = pickle.load(open("Data\Thesaurus_csv\Thesaurus1.pickle",'rb'))
+if os.path.isfile('Data\Enjeux\\modele_avis.pickle'):
+    instance = pickle.load(open('Data\Enjeux\\modele_avis.pickle','rb'))
+Thesaurus = pickle.load(open("Data\Enjeux\Thesaurus\Thesaurus1.pickle",'rb'))
 
+metadata = pd.read_csv("Data\Metadata\etudes_avis_dep_them_id.csv")
 from Pipeline.Enjeux.processing_encoding import processing_thesaurus
 #Le préprocessing permet de lemmatiser les mots du thésaurus de la même manière que les mots du texte vont l'être (sinon ils ne seront pas reconnus)
 Thesaurus = processing_thesaurus(Thesaurus)
-
 #%%
 #On initialise une instance de CorExBoosted
-instance = CorExBoosted(docs_df,Thesaurus)
+instance = CorExBoosted(docs_df[:100],Thesaurus)
 #On preprocess les textes si ce n'est pas déjà fait dans le dataframe chargé
 if 'text_processed' not in docs_df.columns:
     instance.preprocess('texte')
@@ -41,10 +42,10 @@ instance.encode()
 #On peux accéder a des informations de diagnostic ici encore grace a la méthode encore qui génère des attributs, respectivement:
 #Le mapping word-id, la fréquence d'apparition des mots, le vocabulaire trié, les mots du thésaurus qui ne sont pas dans le vocabulaire...
 instance.word2id,instance.words_freq,instance.vocab_sort,instance.notinvoc
-#On fit les classifieurs. Ici on stratifie et on stratifie et on 
-# augmente les données puisqu'on dispose de données corrigées
 
-corrige = pd.read_excel("Data\Workinprogress\Dataframe en correction.xlsx")
+#%%
+#On fit les classifieurs. Ici on stratifie et on stratifie et on augmente les données puisqu'on dispose de données corrigées
+corrige = pd.read_excel("Data\Enjeux\Avis_corrige.xlsx")
 corrige.dropna(inplace = True)
 corrige.drop(['titre', 'url_etude', 'url_avis', 'url_avis_cliquable', 'Status',
         'Biodiversité',
@@ -56,14 +57,38 @@ corrige.drop(['titre', 'url_etude', 'url_avis', 'url_avis_cliquable', 'Status',
     'Déplacements', 'Gestion des déchets'], axis = 1, inplace = True)
 corrige.id_AAE = corrige.id_AAE.astype(int)
 
-instance.fit(n_classif=10,strength=2,df_corrige = corrige)
-pickle.dump(instance,open('Data\Workinprogress\\modele_avis.pickle','wb'))
-# %%
+instance.fit(n_classif=2,strength=2,df_corrige = corrige)
+#%%
+df_corrige = corrige
+docs_df = instance.docs
+enjeux_list = [c.replace('True_','') for c in df_corrige.columns[1:]]
+docs_df.dropna(inplace = True)
+docs_df.id_AAE = docs_df.id_AAE.astype(int)
+docs_df['idx_copy'] = docs_df.index
+df_corrige.dropna(inplace =True)
+final =df_corrige.merge(docs_df, on = 'id_AAE', how='inner')
+X_df = pd.DataFrame(instance.X,index=instance.docs.idx_copy)
+y_true = []
+for enjeu in enjeux_list:
+    y_true.append(final['True_'+enjeu].apply(lambda x: cleanstrtobool(x)).values)
+
+y_true = np.matrix(y_true).T
+X_sub = X_df.iloc[final.idx_copy.values]
+#%%
+y,X = separate(instance.docs,instance.X,df_corrige=corrige)
+ydf = pd.DataFrame(y,columns=instance.enjeux_list)
+Xdf = pd.DataFrame(X,columns=instance.vocab)
+from Pipeline.Enjeux.multilabel_balancing import get_tail_label
+ydf['Biodiversité'].value_counts()
+#%%
+#Enregistrement du modèle
+pickle.dump(instance,open('Data\Enjeux\\modele_avis.pickle','wb'))
+#%%
+#Exploratoire : optimiser le poids de chaque classifieur
 import torch
 y_true = torch.tensor(instance.y_sub.to_numpy())
 y_predict = torch.tensor(instance.predict(np.matrix(instance.X_sub)).astype(float),requires_grad=True)
 
-#%%%
 def optimize_weights(model,loss, epoch = 10):
     import torch
     import numpy as np
@@ -116,7 +141,7 @@ obj = instance.optimize_weights(method = 'SLSQP')
 #Prédiction des présences ou non des topics dans le corpus
 prediction = instance.predict(instance.X,weights=obj.x)
 #Evaluation des résultats (precision, accuracy, recall, F1, pour chaque enjeu)
-sc2 = evaluate(docs_df,prediction,returnscore=True)
+sc2 = evaluate(docs_df,prediction,metadata = metadata,returnscore=True)
 
 #%%
 
@@ -124,10 +149,10 @@ sc2 = evaluate(docs_df,prediction,returnscore=True)
 #pour garder une sélectivité raisonnable
 obj2 = instance.optimize_selectivity(bnds=(0.1,0.9))
 prediction = instance.predict(instance.X,selectivity=obj2.x)
-sc3 = evaluate(docs_df,prediction,returnscore=True)
+sc3 = evaluate(docs_df,prediction,metadata = metadata,returnscore=True)
 #%%
 prediction = instance.predict(instance.X)
-sc1 = evaluate(docs_df,prediction,returnscore=True)
+sc1 = evaluate(docs_df,prediction,metadata = metadata,returnscore=True)
 
 #Différence de scores entre le score 2 et le score 1 
 # score 1 = initial, score 2 = après modification, on fait final - initial
@@ -149,7 +174,7 @@ def sample_add(X,sc1,X_sub2,vocab,anchor,strength,enjeux_list,num_average = 20):
         model2.fit(X_sub2, words=vocab, anchors=anchor, anchor_strength=strength)
         #Prédiction et évaluation sur sur toutes les données
         test = model2.predict(X)
-        sc2 = evaluate(test,returnscore=True)
+        sc2 = evaluate(test,metadata = metadata,returnscore=True)
 
         #Calcul du delta des évaluations
         deltamoy = vadd(deltamoy,delta(sc1,sc2,returnmoy=True))
@@ -167,7 +192,7 @@ def sample_add(X,sc1,X_sub2,vocab,anchor,strength,enjeux_list,num_average = 20):
 
 from Pipeline.Enjeux.enrichissement import *
 
-inst = makesimilarity(dico_thesau,cosimilarite=pickle.load(open("Data\Workinprogress\cosimilarite_avis.pickle",'rb')))
+inst = makesimilarity(dico_thesau,cosimilarite=pickle.load(open("Data\Enjeux\cosimilarite_avis.pickle",'rb')))
 add = inst.top_words_topic(100)
 
 from Pipeline.Enjeux.processing_encoding import processing_mot
@@ -196,7 +221,7 @@ for k in range(100):
 
     #Prédiction et évaluation sur sur toutes les données
     test = model.predict(X)
-    sc2 = evaluate(docs_df,test,returnscore=True)
+    sc2 = evaluate(docs_df,test,metadata = metadata, returnscore=True)
     d =delta(sc1,sc2,returnmoy=True)
     
     if sc2[worst_enj][3]-sc1[worst_enj][3]>0:
@@ -228,7 +253,7 @@ for k in range(1,100):
 
     #Prédiction et évaluation sur sur toutes les données
     test = model.predict(X)
-    sc2 = evaluate(docs_df,test,returnscore=True)
+    sc2 = evaluate(docs_df,test,metadata = metadata,returnscore=True)
     worst_enj = ''
     dummy = [1,1,1,1]
     for e in sc2:
@@ -256,7 +281,7 @@ for it in range(20):
 
     #Prédiction et évaluation sur sur toutes les données
     test = modelPoub.predict(X)
-    sc2 = evaluate(docs_df,test,returnscore=True)
+    sc2 = evaluate(docs_df,test,metadata = metadata,returnscore=True)
 
     #Calcul du delta des évaluations
     deltamoy = vadd(deltamoy,delta(sc1,sc2,returnmoy=True))
@@ -276,8 +301,8 @@ for it in range(20):
 
     #Prédiction et évaluation sur sur toutes les données
     test = modelPoub2.predict(X)
-    sc2 = evaluate(test,returnscore=True)
-    sc1 = evaluate(topic_model[2].labels,returnscore=True)
+    sc2 = evaluate(test,metadata = metadata,returnscore=True)
+    sc1 = evaluate(topic_model[2].labels,metadata = metadata,returnscore=True)
 
     #Calcul du delta des évaluations
     

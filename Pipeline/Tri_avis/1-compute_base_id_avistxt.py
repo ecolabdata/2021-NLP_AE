@@ -8,7 +8,7 @@ import pandas as pd, numpy as np
 import os
 import codecs
 # Read recipe inputs£
-path = "Data\Avis_txt\\"
+path = "Data\Avis_brutTXT\\"
 listfiles = os.listdir(path)
 
 
@@ -84,7 +84,7 @@ base_id_avistxt_df['hasPO'] = sortie4
 # In[ ]:
 import pickle
 
-path = "Data\Workinprogress\\"
+path = "Data\Bases_intermediaire\\"
 # Write recipe outputs
 base_id_avistxt = pickle.dump(base_id_avistxt_df,open(path+"base_id_avistxt.pickle",'wb'))
 

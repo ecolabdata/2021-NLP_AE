@@ -6,7 +6,7 @@ from Pipeline.Enjeux.topicmodeling_pipe import CorExBoosted
 docs_df = pickle.load(open("Data\Bagging_model\df_sections.pickle",'rb'))
 docs_df.dropna(inplace = True)
 docs_df.rename(columns = {'num_etude':'id_AAE'},inplace = True)
-Thesaurus = pickle.load(open("Data\Thesaurus_csv\Thesaurus1.pickle",'rb'))
+Thesaurus = pickle.load(open("Data\Enjeux\Thesaurus\Thesaurus1.pickle",'rb'))
 #%%
 from Pipeline.Enjeux.processing_encoding import processing_thesaurus,processing
 
@@ -46,10 +46,10 @@ instance.word2id,instance.words_freq,instance.vocab_sort,instance.notinvoc
 #On fit les classifieurs. On peux en mettre plus ou moins. La stratification et l'augmentation ne sont possible que si on dispose de données labellisées !
 instance.fit(n_classif=100,stratify=False,augment=False)
 
-pickle.dump(instance,open('Data/enjeux_section.pickle','wb'))
+pickle.dump(instance,open('Data/modele_section.pickle','wb'))
 # %%
 import pandas as pd
-
+instance = pd.load
 preds = instance.predict(instance.X)
 g = pd.DataFrame(preds,columns=instance.enjeux_list)
 d = docs_df.drop('section_html',axis = 1)
@@ -62,5 +62,5 @@ final.drop(['level_0','index'],inplace = True, axis =1)
 # %%
 
 
-final.to_csv('Data\Workinprogress\section_test.csv')
+final.to_csv('Data\Bases_final\section_enjeux.csv')
 # %%
