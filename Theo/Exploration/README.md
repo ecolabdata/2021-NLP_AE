@@ -24,7 +24,7 @@ Tous les modèles ou données cités sont sourcés en bas de la page, n'hésitez
 * __FUES.vocab__ : vocabulaire du tokenizer entraîné sur les données OrangeSum (voir __BARThez_BERTSUM.py__).
 * __MLSUM_prep.ipynb__ : Jupyter pour la préparation et le nettoyage des données MLSUM et notamment leur adaptation à notre cas de résumé extractif pour __Deep Learning__. 
 * __MLSUM_prep.py__ : Téléchargement des données MLSUM, découpage pour préparation plus rapide des données (car très volumineuses) puis différentes boucles de création d'output pour le résumé extractif.
-* __Pipe_resume_vf.py
+* __Pipe_resume_vf.py__ :
 * __Stat_sommaire.py__ : code permettant de produire quelques statistiques rapides sur les données disponibles et retravaillées des études d'impact.
 * __TextRank_essai_1.py__ : code de création et de développement du modèle de résumé TextRank avec deux embedding différents.
 * __compter_pages.py__ : quelques statistiques sur le nombre de pages des documents présents.
