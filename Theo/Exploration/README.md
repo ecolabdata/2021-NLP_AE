@@ -38,7 +38,7 @@ Tous les modèles ou données cités sont sourcés en bas de la page, n'hésitez
 * __gpu_essai_1.ipynb__ : premier jupyter concernant l'entraînement sur GPU des modèles de deep learning. 
 * __make_metrics.py__ : code produisant les sorties de tous les modèles pour pouvoir ensuite les comparer (contient aussi des corrections de certaines fonctions).
 * __make_train_dataset.py__ : code permettant de faire rapidement les __data loader__ (des objets torch pour l'entraînement des modèles DL).
-** __pipeline_resume.py__ : code présentant la pipeline résumé avec un exemple fonctionnel.
+* __pipeline_resume.py__ : code présentant la pipeline résumé avec un exemple fonctionnel.
 * __resume.py__ : code produisant les exemples de résumé sur les véritables données DREAL (notamment ceux pour l'atelier ayant eu lieu à Rennes le 25 juin 2021).
 * __tentative_scraping_1.py__ : scraping du site projet-environnement-diffusion (des études d'impact) ainsi que du Thésaurus sur LegiFrance.
 * __test_dl.ipynb__ : deuxième jupyter pour l'entraînement GPU des modèles DL, un peu plus light et direct.
