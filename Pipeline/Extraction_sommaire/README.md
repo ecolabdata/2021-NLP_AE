@@ -2,6 +2,8 @@
 
 Bienvenue dans le dossier consacré à la détection et l'extraction du sommaire des études d'impacts.
 
+Pour les personnes n'ayant pas accès aux données du fichier __setup.py__ dans le repo, nous mettons à disposition 10 études dans ce dossier pour pouvoir reproduire en partie le processus. Nous mettons également à disposition les modèles. En revanche, si vous désirez utiliser ces codes vos propres documents, les modèles seront à ré-rentraîner depuis le début.
+
 Avant toute chose, nous avons transformés en HTML les études d'impact dont nous disposions, à savoir les dossiers clos disponibles sur https://www.projets-environnement.gouv.fr/pages/home/ (soit environ 650 études). Pour cela, nous avons utilisé le logiciel propriétaire ABBYY Fine Reader. Sur ces 650 études, seules 150 ont été utilisables après le traitement ABBYY, cette réduction est dûe à plusieurs erreurs : mot de passe, PDF trop lourd etc...
 
 ### 1.1 - Construction de la base HTML
