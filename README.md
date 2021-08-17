@@ -40,7 +40,9 @@ Pour setup le projet, il faut exécuter le script setup.py depuis la racine du p
 
 <a name="sommaire"/></a>
 ## 1 - Détection et extraction du sommaire
-
+Afin de réaliser la __synthèse augmentée__, nous avions besoin d'avoir accès au sommaire. C'est grâce à l'extraction du sommaire que nous allions pouvoir découper les documents, puis pouvoir travailler sur les différentes sections en les analysant. Pour cela, il fallait d'abord les détecter.
+Ce [dossier](./Pipeline/Extraction_sommaire) présente donc la démarche ainsi que les codes que nous avons utilisé pour détecter et extraire le sommaire des documents.
+Dans la mesure du possible, nous avons tenté de reprendre ces codes pour qu'ils soient adaptables à d'autres documents. Il convient cependant de comprendre que ces codes ne sont pas encore totalement généralisables, et que nous ne sommes pas responsables des particularités d'autres documents qui viendraient empêcher le code de fonctionner.
 
 
 <a name="enjeux"/></a>
