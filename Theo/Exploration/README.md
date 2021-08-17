@@ -24,7 +24,7 @@ Tous les modèles ou données cités sont sourcés en bas de la page, n'hésitez
 * __FUES.vocab__ : vocabulaire du tokenizer entraîné sur les données OrangeSum (voir __BARThez_BERTSUM.py__).
 * __MLSUM_prep.ipynb__ : Jupyter pour la préparation et le nettoyage des données MLSUM et notamment leur adaptation à notre cas de résumé extractif pour __Deep Learning__. 
 * __MLSUM_prep.py__ : Téléchargement des données MLSUM, découpage pour préparation plus rapide des données (car très volumineuses) puis différentes boucles de création d'output pour le résumé extractif.
-* __Pipe_resume_vf.py
+* __Pipe_resume_vf.py__ :
 * __Stat_sommaire.py__ : code permettant de produire quelques statistiques rapides sur les données disponibles et retravaillées des études d'impact.
 * __TextRank_essai_1.py__ : code de création et de développement du modèle de résumé TextRank avec deux embedding différents.
 * __compter_pages.py__ : quelques statistiques sur le nombre de pages des documents présents.
@@ -38,7 +38,7 @@ Tous les modèles ou données cités sont sourcés en bas de la page, n'hésitez
 * __gpu_essai_1.ipynb__ : premier jupyter concernant l'entraînement sur GPU des modèles de deep learning. 
 * __make_metrics.py__ : code produisant les sorties de tous les modèles pour pouvoir ensuite les comparer (contient aussi des corrections de certaines fonctions).
 * __make_train_dataset.py__ : code permettant de faire rapidement les __data loader__ (des objets torch pour l'entraînement des modèles DL).
-** __pipeline_resume.py__ : code présentant la pipeline résumé avec un exemple fonctionnel.
+* __pipeline_resume.py__ : code présentant la pipeline résumé avec un exemple fonctionnel.
 * __resume.py__ : code produisant les exemples de résumé sur les véritables données DREAL (notamment ceux pour l'atelier ayant eu lieu à Rennes le 25 juin 2021).
 * __tentative_scraping_1.py__ : scraping du site projet-environnement-diffusion (des études d'impact) ainsi que du Thésaurus sur LegiFrance.
 * __test_dl.ipynb__ : deuxième jupyter pour l'entraînement GPU des modèles DL, un peu plus light et direct.

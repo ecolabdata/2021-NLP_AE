@@ -8,7 +8,7 @@
 import pickle
 import pandas as pd, numpy as np
 # Read recipe inputs
-path = "Data\Workinprogress\\"
+path = "Data\Bases_intermediaire\\"
 
 base_id_avistxt_df = pickle.load(open(path+"base_id_avistxt.pickle",'rb'))
 

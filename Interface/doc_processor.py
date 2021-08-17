@@ -80,7 +80,6 @@ Thesaurus = pickle.load(open('Data\Thesaurus_csv\Thesaurus1.pickle','rb'))
 Thesaurus = processing_thesaurus(Thesaurus)
 
 from Pipeline.Enjeux.topicmodeling_pipe import CorExBoosted
-Paragraphes = Paragraphes[:10]
 extracteur_enjeux = CorExBoosted(df,Thesaurus,model = pickle.load(open('Data/enjeux_section.pickle','rb')))
 
 enjeux = extracteur_enjeux.extract_topics(Paragraphes)

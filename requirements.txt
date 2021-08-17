@@ -26,6 +26,7 @@ click==7.1.2
 cloudscraper==1.2.58
 colorama==0.4.4
 contextvars==2.4
+corextopic==1.1
 cssselect==1.1.0
 cycler==0.10.0
 cymem==2.0.5
