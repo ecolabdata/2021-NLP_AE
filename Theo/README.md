@@ -11,12 +11,14 @@ Le code __fats.py__ est le module regroupant un ensemble de classes et fonctions
 
 Ce dossier contient des codes et un dossier :
 * **Exploration** : qui contient l'ensemble des codes préliminaires qui ont amené au travail abouti que vous avez ci plus haut. Je les laisse à but informatif et de compréhension.
+* **Model** : qui contient les modèles nécessaires pour faire tourner les fonctions de résumés. Attention, le dossier est assez gros.
 
 ## Listes des codes et applications :
 
 * __Note_technique.pdf__ : note concernant la stratégie envisagée pour le traitement Deep Learning du résumé, expliquant l'esprit et la méthode du travail.
-* __pipeline_final.ipynb__ :
-* __pipeline_DL.ipynb__ :
+* __Paragraphes_exemple.pickle__ : exemple de paragraphes pour les deux pipelines résumés. 
+* __pipeline_final.ipynb__ : code permettant de lancer la fonction finale de résumé. Vous avez un large choix de modèles, qui sont disponibles dans le dossier [Model](./Model). De plu vous avez un exemple présent dans ce dossier.
+* __pipeline_DL.ipynb__ : code permettant de lancer la fonction de résumé Deep Learning.
 * __fats.py__ : fichier **module**, c'est-à-dire comportant l'aboutissement de tout le travail fonctionnel sur le résumé. Il rassemble toutes les fonctions utiles pour cela. Il est appelé très souvent au sein des codes aboutis, donc pensez à bien le mettre dans votre dossier.
 
 ## Prise en main 

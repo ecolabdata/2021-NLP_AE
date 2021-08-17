@@ -20,6 +20,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import sys
+import gc
 
 class Word_Cleaning():
       '''
@@ -601,7 +602,7 @@ class Make_Extractive():
                #'clss':test_clss,
                #'clss_index':clss_index_test,
                'output':test_output,
-               'mask_cls':test_mask_cls,
+            #    'mask_cls':test_mask_cls,
                'trace' : trace_test
             }
             # pickle.dump(dico_test,open(self.path+'/dico_test.pickle','wb'))
@@ -1440,7 +1441,7 @@ def make_text(texte,j=5,s=True,t=True,seuil=2,lem=False,sc=3):
 #     else:
 #         return text,empty
 
-def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False):
+def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,x=3,time_=False):
     '''
     Fonction permettant d'utiliser les modèles de Deep Learning en torch pour produire des résumés automatiques.
     @texte : une liste de phrases ou une liste de listes de phrases.
@@ -1454,7 +1455,7 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
     @tr : dummy pour l'entraînement, fixé à False donc.
     @get_score_only : dummy pour ne récupérer que les index des phrases et non les phrases elles-mêmes.    
     '''
-    
+    s1=time()
     try :
         assert choose_model in ['SMHA','Simple','Net','Multi']
     except:
@@ -1468,14 +1469,22 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
     if camem==None:
         from transformers import CamembertModel
         camem=CamembertModel.from_pretrained("camembert-base")
-        
+
+    if time_:
+        s2=time()   
+        print("checks :",round((s2-s1)/60,2),"minutes") 
+
     Text=Parallel(n_jobs=cpu)(delayed(make_text)(t) for t in texte)
     
     text=[Text[i][0] for i in range(len(Text))]
     empty=[Text[i][1] for i in range(len(Text))]
     
     dico=Make_Extractive(cpu).make_encoding(text,voc_size=vs,split=sp,tokenizer=tok,training=tr)
-    
+
+    if time_:
+        s3=time()
+        print("nettoyage :",round((s3-s2)/60,2),"minutes") 
+
     if choose_model=='SMHA':
         model=SMHA_Linear_classifier(torch.Size([512,768]),8,768)
         model.load_state_dict(torch.load('SMHA_Linear_classifier.pt',map_location=torch.device('cpu')))
@@ -1496,7 +1505,29 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
         model.load_state_dict(torch.load('Multi_Linear_Classifier.pt',map_location=torch.device('cpu')))
         model.eval()    
     
-    y=model(camem(torch.Tensor(dico['input']).long(),torch.Tensor(dico['mask']).long()).last_hidden_state)
+    if time_:
+        s4=time()
+        print("sélection modèle :",round((s4-s3)/60,2),"minutes") 
+    
+    try:
+        y=model(camem(torch.Tensor(dico['input']).long(),torch.Tensor(dico['mask']).long()).last_hidden_state.detach())
+    except:
+        y=[]
+        l=len(dico['input'])
+        for i in range(x):
+            y.append(
+                model(
+                    camem(torch.Tensor(dico['input']).long()[int((i/2)*l):int(((i+1)/2)*l)],
+                          torch.Tensor(dico['mask']).long()[int((i/2)*l):int(((i+1)/2)*l)]).last_hidden_state.detach()))
+        y=torch.cat(y)
+    
+    if time_:
+        s5=time()
+        print("Camembert :",round((s5-s4)/60,2),"minutes")
+    
+    del model
+    gc.collect() 
+    
     t=torch.mul(dico['mask_cls'],y).topk(3)
     vec=[(dico['mask_cls'][i]==torch.tensor(1)).nonzero() for i in range(len(dico['mask_cls']))]
     values=t[0]
@@ -1523,6 +1554,10 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
     rindex=[torch.cat([(Ve2[h]==vrai_index[h][i]).nonzero().squeeze(1) for i in range(k)]) for h in range(len(Ve2))]
     
     a=[[i for i in range(len(texte[k]))] for k in range(len(texte))]
+    
+    if time_:
+        s6=time()
+        print("Récupération index :",round((s6-s5)/60,2),"minutes") 
     
     for i in range(len(texte)):
         for k in empty[i]:
@@ -1649,3 +1684,61 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,
             end_2=time()
             print("La production des résumés a pris :",round((end_2-end_time)/60,2),"minutes")
             return res,text
+
+def make_new_paragraphes(tcp,trace):
+   paragraphe=[]
+   paragraphe.append(tcp[:trace[-1][0]])
+   if len(trace[-1])>1:
+      for i in range(1,len(trace[-1])):
+         paragraphe.append(tcp[trace[-1][i-1]:(np.sum(trace[-1][:i])+trace[-1][i])])
+   return paragraphe
+
+def make_new_sortie(sortie,index=None,k=2):
+    '''
+    Fonction pour transformer les sorties de dimension x en dimension k.
+    '''
+    ouais=torch.zeros(sortie.size())
+    if index==None:
+        ouais[sortie.topk(k)[1]]=1
+    else:
+        ouais[index[:k]]=1
+    return ouais
+
+def comparaison(f,dico='dico_comparaison.pickle',j=2):
+    dico=pickle.load(open(dico,'rb'))
+    l=[i for i in range(len(dico['score'])) if len(dico['phrase'][i])==len(dico['score'][i]) ]
+    score_vrai=[dico['score'][i] for i in l]
+#     fichiers=[i for i in os.listdir() if (name in i) and ('.pickle' in i)]
+    sortie=pickle.load(open(f,'rb'))
+    if len(sortie)==23799:
+        simple=[sortie[i] for i in range(len(sortie)) if i not in dico['erreur']]
+        simple2=[simple[i] for i in l]
+        simple3=Parallel(j)(delayed(fats.make_new_sortie)(i,j) for i,j in zip(score_vrai,simple2))
+    
+    assert len(simple3)==len(score_vrai)
+        
+    F1=fats.F1_score()
+    tp=[]
+    fp=[]
+    fn=[]
+    p=[]
+    r=[]
+    f=[]
+    
+    for i in tqdm(range(len(simple3))):
+        tp.append(F1.true_positive_mean(simple3[i],score_vrai[i]))
+        fp.append(F1.false_positive_mean(simple3[i],score_vrai[i]))
+        fn.append(F1.false_negative_mean(simple3[i],score_vrai[i]))
+        p.append(F1.precision(simple3[i],score_vrai[i]))
+        r.append(F1.recall(simple3[i],score_vrai[i]))
+        f.append(F1(simple3[i],score_vrai[i]))
+        
+    mtp=torch.mean(torch.tensor(tp))
+    mfp=torch.mean(torch.tensor(fp))
+    mfn=torch.mean(torch.tensor(fn))
+    mp=torch.mean(torch.tensor(p))
+    mr=torch.mean(torch.tensor(r))
+    mf=torch.mean(torch.tensor(f))
+    resultat=[mtp,mfp,mfn,mp,mr,mf]
+    
+    return resultat
