@@ -55,7 +55,7 @@ Un README y est également présent pour expliquer les développements et explor
 ## 3 - Résumé automatique de sections
 **Objectif** : effectuer du résumé extractif (sélection des phrases pertinentes) sur les sections des études d'impacts.
 
-Vous trouverez l'ensemble des travaux opérationnels et exploratoires dans le dossier [Théo](../2021-NLP_AE/tree/master/Theo).
+Vous trouverez l'ensemble des travaux opérationnels et exploratoires dans le dossier [Théo](../tree/master/Theo).
  
 Nous développons quatre approches différentes qui sont :
 * Une famille de modèles basées sur du __Deep Learning__
