@@ -41,6 +41,9 @@ Vous pourrez de même introduire vos propres données (attention au format et à
 ## L'approche du résumé automatique
 
 
+Le résumé pratiqué ici est extractif, en accord avec les auditeurs de la DREAL Bretagne. C'est-à-dire que l'on sélectionne les phrases les plus pertinentes de chaque paragraphe.
+
+Nous avons développés ici 4 types de modèles. Certains sont assez simples, d'autres basés sur des techniques modernes de Deep Learning.  
 
 ### 1. Les approches et les méthodes associées
 
@@ -55,7 +58,6 @@ C'est pourquoi nous avons enlevé les éléments suivants :
 * la ponctuation
 * les chiffres
 * les articles et autres mots __vides__ (c'est-à-dire présent trop souvent pour apporter de l'information)
-* 
 
 #### 1.1 - Deep Learning Oriented Extractive Summarizer (DLOES)
 Ces dernières années, les techniques de Deep Learning appliquées au traitement du langage naturel se sont largement développés et proposent des outils désormais très puissants. Dans cette même veine, l'Ecolab a décidé de tenter la création d'un modèle de Deep Learning pour extraire les phrases importantes d'un paragraphe.  
@@ -128,4 +130,4 @@ F1|0.0834|0.0795|0.0809|0.0809|0.0809|0.0808|0.0832|0.0804|**0.0896**|
 
 ## Contacts
 
-[Théo Roudil-Valentin](theo.roudil-valentin@ensae.fr)
+[Théo Roudil-Valentin](mailto:theo.roudil-valentin@ensae.fr)

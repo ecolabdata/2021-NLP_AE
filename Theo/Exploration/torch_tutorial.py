@@ -1,3 +1,12 @@
+################################################################################################
+###  Prise en main de torch  ##########################################################################
+################################################################################################
+
+# Petit code pour prendre en main torch et notamment le sous module lié aux réseaux de neurones
+# Notamment toutes les histoires de gradients et de propagation vers l'arrière (back propagation)
+
+
+
 # Here we introduce the most fundamental PyTorch concept: the Tensor. 
 # A PyTorch Tensor is conceptually identical to a numpy array: 
 # a Tensor is an n-dimensional array, 

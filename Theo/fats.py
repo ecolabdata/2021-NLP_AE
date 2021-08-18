@@ -1019,7 +1019,8 @@ class F1_score:
         Caclul le nombre moyen de vrai positif de la prediction x par rapport aux labels y (binaires).
         '''
         tp=torch.mul(x,y).sum()
-        tpm=torch.div(tp,y.shape[0])
+        k=y.sum()
+        tpm=torch.div(tp,k)#y.shape[0])
         return tpm
     @staticmethod
     def false_positive_mean(x,y) -> torch.tensor:
@@ -1030,7 +1031,13 @@ class F1_score:
         fp=torch.sub(x,y)
         fp=torch.max(fp,torch.tensor([0.]).to(device))
         fp=fp.sum().float()
-        fpm=torch.div(fp,y.shape[0])
+        numneg=y.shape[0]-y.sum()
+        fpm=torch.div(fp,numneg)#y.shape[0])
+        if numneg==0: # Pour éviter division par 0
+            if fp==0: # Si fp==0 et numneg==0, alors on est bon
+                return torch.tensor(0)
+            if fp!=0: # alors fp==1, et on n'est pas bon
+                return torch.tensor(0)
         return fpm
     @staticmethod
     def false_negative_mean(x,y) -> torch.tensor:
@@ -1041,24 +1048,36 @@ class F1_score:
         device=y.device
         fn=torch.max(fn,torch.tensor([0.]).to(device))
         fn=fn.sum().float()
-        fnm=torch.div(fn,y.shape[0])
+        numpos=y.sum()
+        fnm=torch.div(fn,numpos)#y.shape[0])
         return fnm
     #@staticmethod
     def precision(self,x,y) -> torch.tensor:
         device=y.device
-        tp=self.true_positive_mean(x,y)
-        fp=self.false_positive_mean(x,y)
-        if (tp+fp)!=0:
-            prec=torch.div(tp,(tp+fp))
-            return prec
-        else:
-            return torch.tensor(0.).to(device)
+        tp=torch.mul(x,y).sum()
+        fp=torch.sub(x,y)
+        fp=torch.max(fp,torch.tensor([0.]).to(device))
+        fp=fp.sum().float()
+        return torch.div(tp,tp+fp)
+        # tp=self.true_positive_mean(x,y)
+        # fp=self.false_positive_mean(x,y)
+        # if (tp+fp)!=0:
+        #     prec=torch.div(tp,(tp+fp))
+        #     return prec
+        # else:
+        #     return torch.tensor(0.).to(device)
 
     def recall(self,x,y) -> torch.tensor:
-        tp=self.true_positive_mean(x,y)
-        fn=self.false_negative_mean(x,y)
+        tp=torch.mul(x,y).sum()
+        fn=torch.sub(y,x)
+        device=y.device
+        fn=torch.max(fn,torch.tensor([0.]).to(device))
+        fn=fn.sum().float()
+        #self.true_positive_mean(x,y)
+        # fn=self.false_negative_mean(x,y)
         rec=torch.div(tp,(tp+fn))
         return rec
+
     def __call__(self,x,y) -> torch.tensor:
         device=y.device
         rec=self.recall(x,y)
@@ -1699,46 +1718,46 @@ def make_new_sortie(sortie,index=None,k=2):
     '''
     ouais=torch.zeros(sortie.size())
     if index==None:
-        ouais[sortie.topk(k)[1]]=1
+        if len(sortie)>=2:
+            ouais[sortie.topk(k)[1]]=1
+        else:
+            ouais[sortie.topk(1)[1]]=1
     else:
         ouais[index[:k]]=1
     return ouais
 
-def comparaison(f,dico='dico_comparaison.pickle',j=2):
-    dico=pickle.load(open(dico,'rb'))
-    l=[i for i in range(len(dico['score'])) if len(dico['phrase'][i])==len(dico['score'][i]) ]
-    score_vrai=[dico['score'][i] for i in l]
-#     fichiers=[i for i in os.listdir() if (name in i) and ('.pickle' in i)]
-    sortie=pickle.load(open(f,'rb'))
-    if len(sortie)==23799:
-        simple=[sortie[i] for i in range(len(sortie)) if i not in dico['erreur']]
-        simple2=[simple[i] for i in l]
-        simple3=Parallel(j)(delayed(fats.make_new_sortie)(i,j) for i,j in zip(score_vrai,simple2))
-    
+
+def comparaison(simple3,score_vrai):
     assert len(simple3)==len(score_vrai)
         
-    F1=fats.F1_score()
-    tp=[]
-    fp=[]
-    fn=[]
-    p=[]
-    r=[]
-    f=[]
+    F1=F1_score()
+    # tp=[]
+    # fp=[]
+    # fn=[]
+    # p=[]
+    # r=[]
+    # f=[]
     
-    for i in tqdm(range(len(simple3))):
-        tp.append(F1.true_positive_mean(simple3[i],score_vrai[i]))
-        fp.append(F1.false_positive_mean(simple3[i],score_vrai[i]))
-        fn.append(F1.false_negative_mean(simple3[i],score_vrai[i]))
-        p.append(F1.precision(simple3[i],score_vrai[i]))
-        r.append(F1.recall(simple3[i],score_vrai[i]))
-        f.append(F1(simple3[i],score_vrai[i]))
+    # for i in tqdm(range(len(simple3))):
+        # tp.append(F1.true_positive_mean(simple3[i],score_vrai[i]))
+        # fp.append(F1.false_positive_mean(simple3[i],score_vrai[i]))
+        # fn.append(F1.false_negative_mean(simple3[i],score_vrai[i]))
+        # p.append(F1.precision(simple3[i],score_vrai[i]))
+        # r.append(F1.recall(simple3[i],score_vrai[i]))
+        # f.append(F1(simple3[i],score_vrai[i]))
+    tp=F1.true_positive_mean(simple3,score_vrai)
+    fp=F1.false_positive_mean(simple3,score_vrai)
+    fn=F1.false_negative_mean(simple3,score_vrai)
+    p=F1.precision(simple3,score_vrai)
+    r=F1.recall(simple3,score_vrai)
+    f=F1(simple3,score_vrai)
         
-    mtp=torch.mean(torch.tensor(tp))
-    mfp=torch.mean(torch.tensor(fp))
-    mfn=torch.mean(torch.tensor(fn))
-    mp=torch.mean(torch.tensor(p))
-    mr=torch.mean(torch.tensor(r))
-    mf=torch.mean(torch.tensor(f))
-    resultat=[mtp,mfp,mfn,mp,mr,mf]
+    # mtp=torch.mean(torch.tensor(tp))
+    # mfp=torch.mean(torch.tensor(fp))
+    # mfn=torch.mean(torch.tensor(fn))
+    # mp=torch.mean(torch.tensor(p))
+    # mr=torch.mean(torch.tensor(r))
+    # mf=torch.mean(torch.tensor(f))
+    # resultat=[mtp,mfp,mfn,mp,mr,mf]
     
-    return resultat
+    return [tp,fp,fn,p,r,f]
