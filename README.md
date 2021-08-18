@@ -12,6 +12,7 @@ L'objectif de ce projet est de produire un outil, la __synthèse augmentée__, p
 Ce document synthétique se présente sous la forme d'un sommaire, où pour chaque titre est associé trois éléments : les enjeux importants, un résumé ainsi que des mots clés. Ce sommaire sera à terme navigable.
 
 L'ensemble des travaux développés sont ré-utilisables et applicables à tout type de document, modulo un ré-entraînement potentiel pour une meilleure adéquation avec le corpus considéré. C'est d'ailleurs dans cet esprit que nous avons travaillé sur ce projet : permettre une bonne généralisation.
+# Table des matières
 
 Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bretagne, qui suivent un processus en plusieurs étapes :
 
