@@ -5,22 +5,42 @@ Date de la dernière modification : **05/08/2021**
 
 Bienvenue dans le dossier de Ruben Partouche contenant les exemples d'utilisation des codes présents dans Pipeline/Enjeux
 
-**Pipeline.Enjeux.topicemodeling_pipe.py**  
+[Pipelin\\Enjeux\\topicmodeling_pipe.py](./2021-NLP_AE/Pipeline/Enjeux/topicmodeling_pipe.py)
 Code principal contenant la classe CorExBoosted qui encapsule un certain nombre d'améliorations utiles sur notre problème.
 
-## 2.0 Listes des codes et applications :
+# Table des Matières
+1. [Contenu du dossier](#contenu)
+2. [L'approche de l'analyse des enjeux](#approches)
+    1. [Algorithme, paramètres, métriques](#a1)  
+    2. [Enrichissement](#a2) 
+        a.[Calcul de similarité](#a21)
+    3. [Stratification et augmentation des données](#a3)  
+        a.[Stratification des données](#a31)  
+        b.[Augmentation des données](#a32)  
+    4. [Bagging et boosting](#a4)
+        a.[Bagging](#a41)
+        b.[Boosting](#a42)
+    5. [Suite du projet](#a5) 
+
+
+## 1. Listes des codes et applications :
+<a name="contenu"></a>
 
 * __Avis_Semisupervised.py__ : code d'exécution des pipelines sur les Avis, avec notamment l'utilisation de données corrigées pour stratifier et augmenter les données artificiellement.
 * __Section_Semisupervised.py__ : code d'exécution des pipelines sur les Sections découpées (impropres)
 * __Enrichissement_explo.py__ : code exploratoire définissant des métriques pour enrichir le thésaurus
 * __compute_mots_finale_Theo_Ruben.py__ : obsolète ! ancien script Dataiku pour réunir des résultats non supervisés de topic modeling
 
-## 2.0 L'approche de l'analyse des enjeux
+## 2. L'approche de l'analyse des enjeux
+<a name="approches"></a>
+
 En non supervisé, nous avons testé plusieurs approches de topic modeling (LDA, LSA, word2vec + Kmeans, etc...) qui n'ont pas été concluantes car les résultats étaient trop peu utiles et pertinents du point de vue métier.
 
 On a donc ramené le problème a celui d'une classification multiclasse et multilabel, en utilisant un algorithme semi-supervisé, dans le sens ou il ne prend pas en entrée la "cible" pour s'orienter, mais un thésaurus (dictionnaire de mots associés aux enjeux).
 
 ### 2.1 - Algorithme, paramètres, métriques
+<a name="a1"></a>
+
 L'algorithme utilisé est CorEx (version adaptée pour le topic modeling, voir https://github.com/gregversteeg/corex_topic/tree/master/corextopic).
 C'est un algorithme dont le principal défaut est d'avoir une grande variance : l'initialisation est semi-aléatoire et le résultat final change grandement entre deux tests.
 
@@ -45,11 +65,15 @@ Sur certaines approches (bagging et boosting notamment), ont été expérimenté
 la Hamming Loss (https://scikit-learn.org/stable/modules/generated/sklearn.metrics.hamming_loss.html) et la Label Ranking Loss (https://scikit-learn.org/stable/modules/generated/sklearn.metrics.label_ranking_loss.html). Plus de détails dans la section concernée.
 
 ### 2.2 - Enrichissement
+<a name="a2"></a>
+
 **Objectif** : améliorer les performances par l'enrichissement du thésaurus.
 **Approches** : entrainement d'un word2vec puis calcul de similarité
 **Pistes d'améliorations** : tester d'autres métriques de similarités, trouver de nouvelles approches donnant des recommandations plus pertinentes ?
 
 #### 2.2.1 - Calcul de similarité
+<a name="a21"></a>
+
 **Attention** : utilisation d'un GPU très hautement recommandée pour le calcul de similarité.
 **Utilisation** :
 On appelle la classe maksimilarity de Pipeline.Enjeux.enrichissement sur le thésaurus.
@@ -67,12 +91,16 @@ Il pourrait être intéressant de tester l'enrichissement sur des modèles en ba
 Le pipeline d'enrichissement n'est pas implémenté car les tests ne sont pas concluants. Il est toutefois possible de retrouver les test dans "semisupervised_avis.py".
 
 ### 2.3 - Stratification et augmentation des données
+<a name="a3"></a>
+
 **Objectif** : améliorer les performances sur certains labels spécifiquement.
 **Approches** : Stratification des données, augmentation des données
 Un des problèmes constatés est que les enjeux les moins représentés sont moins bien détectés par l'algorithme (performances a 0,3 en F1 contre 0,7 en moyenne).
 Pour résoudre ce souci, deux approches complémentaires ont été testées : la stratification puis l'augmentation des données.
 
 #### 2.3.1 - Stratification des données
+<a name="a31"></a>
+
 **Utilisation** :
 En utilisation directe on appelle la fonction get_minority_instance(X,y) avec X dataframe des documents labellisés avec leurs features, y les labels correspondants (même index pour X et y)
 On récupère X_sub et y_sub, sous ensemble des documents aux labels minoritaires.
@@ -87,6 +115,8 @@ En revanche si des enjeux cooccurent souvent, comme c'est le cas pour la gestion
 **Pistes d'améliorations** : essayer une autre méthode consistant a prendre uniquement les documents qui n'ont pas un trop grand nombre de label (2 par exemple) puis équilibrer à partir de ce sous ensemble. Le vocabulaire sera potentiellement plus spécifique.
 
 #### 2.3.2 - Augmentation des données
+<a name="a32"></a>
+
 **Attention** : Il semble que malgré les améliorations, si on rajoute trop de samples(plus de 2 fois le nombre de samples d'origine environ), cela déséquilibre plus la distribution qu'autre chose ! Problème a confirmer/diagnostiquer mais voir explications plus bas sur son orginine supposée.
 **Utilisation** :
 En utilisation directe on appelle la fonction MLSMOTE2(X_sub,y_sub,n_samples), avec X_sub et y_sub dataframes sous ensemble des documents aux labels minoritaires, n_samples le nombre de samples a rajouter.
@@ -102,6 +132,8 @@ Les données sont si pauvres en label sous représentés que trop peu d'exemples
   - Diminuer la sélectivité du processus d'augmentation, par exemple en autorisant, si un label est sous représenté, a considérer que la ligne synthétique contient l'enjeu si seulement 1 voisin contient le label sous représenté. Cela pourrait par contre fausser l'apprentissage. Cette solution est implémentée avec MLSMOTE2 (MLSMOTE est l'algorithme initial décrit dans l'article précédent).
 
 ### 2.4 - Bagging et boosting
+<a name="a4"></a>
+
 **Objectif** : améliorer les performances globales
 **Approches** : Bagging simple, boosting
 Un des problèmes constatés est la grande variance de l'algo : pour deux tests a paramètres identiques (sans random seed) on a des résultats qui peuvent être radicalement différents en terme de performance.
@@ -109,6 +141,8 @@ Pour améliorer cela, on fait du bagging : on entraine un grand nombre de modèl
 
 
 #### 2.4.1 - Bagging
+<a name="a41"></a>
+
 **Utilisation** :
 Via la classe principale CorExBoosted, utiliser l'argument n_classif du .fit() ! n_classif correspond au nombre d'instances de CorEx qui vont êtres entrainées.
 Si on ne stratifie pas et qu'on augmente pas les données, tout est entrainé sur le corpus de base
@@ -121,6 +155,8 @@ Un paramètre qui est ajouté par cette approche est la sélectivité du modèle
 **Pistes d'améliorations** : tester ce qui se passe si on stratifie&augmente et qu'on entraine tous les classifs sur le même dataset augmenté, sinon boosting
 
 #### 2.4.2 - Boosting
+<a name="a42"></a>
+
 Pour aller plus loin, des approches de boosting (bagging avec coefficients en fonction des performances de modèles) doivent être testées.
 **Utilisation** : depuis la classe principale CorExBoosted, on appelle la méthode .optimize_weights(). On peux changer la méthode utilisée par scipy (voir la doc de minimize : https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html)
 
@@ -130,6 +166,7 @@ Déjà testé : scipy.optimize.minimize pour minimiser la Hamming Loss, la Ranki
 
 
 ## 2.5 Suite du projet
+<a name="a5"></a>
 
 A la suite du projet, reste a faire :
 - Implémenter certaines des pistes données pour améliorer les performances
