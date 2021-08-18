@@ -25,6 +25,7 @@ from fats import BERTScore, Make_Embedding,TextRank,Random_summary,Lead_3,SMHA_L
 from fats import Make_Extractive
 
 os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
+#%%
 #On va entrainer un nouveau Word2Vec qui comprendra les phrases 
 # des données de validation en même temps que celles de l'entraînement
 
@@ -126,41 +127,41 @@ os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
 # os.remove("test/score_1.pickle")
 # os.remove("test/erreur_0.pickle")
 # os.remove("test/erreur_1.pickle")
+#%%
+score=pickle.load(open("test/score.pickle",'rb'))
+erreur=pickle.load(open("test/erreur.pickle",'rb'))
 
-# score=pickle.load(open("test/score.pickle",'rb'))
-# erreur=pickle.load(open("test/erreur.pickle",'rb'))
 
-
-# summaries=[i for i in os.listdir("test/") if ('summary_clean' in i) and ('test' in i)]
-# texts=[i for i in os.listdir("test/") if ('text_clean' in i) and ('test' in i)]
+summaries=[i for i in os.listdir("test/") if ('summary_clean' in i) and ('test' in i)]
+texts=[i for i in os.listdir("test/") if ('text_clean' in i) and ('test' in i)]
 # print(summaries,texts)
 
-# text_clean=pickle.load(open("test/"+texts[0],'rb'))
-# summary_clean=pickle.load(open("test/"+summaries[0],'rb'))
-# assert len(text_clean)==len(summary_clean)
-
+text_clean=pickle.load(open("test/"+texts[0],'rb'))
+summary_clean=pickle.load(open("test/"+summaries[0],'rb'))
+assert len(text_clean)==len(summary_clean)
+#%%
 # On enlève les phrases dans les paragraphes qui n'ont pas de scores associés
 # Autrement dit, lors de la création du score, ces phrases ont posé problème
 # On les enlève donc des paragraphes
 
-# for i in erreur:
-#    print(i)
-#    try:
-#       text_clean[i[0]].remove(text_clean[i[0]][i[1]])
-#    except:
-#       continue
+for i in erreur:
+   print(i)
+   try:
+      text_clean[i[0]].remove(text_clean[i[0]][i[1]])
+   except:
+      continue
    
-# len(score[0]),len(text[0]),len(text_clean[0])
-
+len(score[0]),len(text_clean[0])#,len(text[0])
+#%%
 # On crée le dictionnaire contenant tout les tenseurs pour l'entraînement DL (Deep Learning)
-# ME=Make_Extractive(cpu=psutil.cpu_count())
-# start=time.time()
-# dico_test=ME.make_encoding(text_clean,score,tokenizer='MLSUM_tokenizer.model',prefix="test",name="Tokenizer_test",split=1)
-# end=time.time()
-# print(round((end-start)/60,2),"minutes")
-# len(dico_test['input'])
-# dico_test['trace']
-
+ME=Make_Extractive(cpu=psutil.cpu_count())
+start=time.time()
+dico_test=ME.make_encoding(text_clean,score,tokenizer='MLSUM_tokenizer.model',prefix="test",name="Tokenizer_test",split=1)
+end=time.time()
+print(round((end-start)/60,2),"minutes")
+print(len(dico_test['input']))
+dico_test['trace']
+#%%
 
 # A partir d'ici on va re-nettoyer pour avoir quelque chose de comparable avec
 # les deux familles de modèles : ceux relevant du DL et les autres (BertScore, TextRank etc...)
@@ -168,28 +169,33 @@ os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
 # pour créer les tenseurs pour les modèles DL
 
 # On compte le nombre de phrases présentes dans chaque paragraphe
-# nombre_phrase_text_clean=[len(i) for i in text_clean] 
+nombre_phrase_text_clean=[len(i) for i in text_clean] 
 # On compte le nombre de phrases présentes dans chaque tenseur
-# nombre_phrase_input=[i.count(5) for i in dico_test['input']]
+nombre_phrase_input=[i.count(5) for i in dico_test['input']]
 # On compare les dix premiers pour voir 
-# print(nombre_phrase_text_clean[:10],'\n',nombre_phrase_input[:10])
+print(nombre_phrase_text_clean[:10],'\n',nombre_phrase_input[:10])
 
 #On crée un nouvel index pour ne pas prendre en compte les scores vides (problème dans l'encodage)
-# index_1=[i for i in range(len(score)) if (score[i].shape!=torch.Size([0]))]
+index_1=[i for i in range(len(score)) if (score[i].shape!=torch.Size([0]))]
 # On enlève de l'index les tenseurs qui n'ont pas de phrases (non encodages encore)
-# index_2=[i for i in index_1 if (dico_test['trace'][i]>0)]
-# check=[i for i in range(len(score)) if i not in index_2]
+index_2=[i for i in index_1 if (dico_test['trace'][i]>0)]
+check=[i for i in range(len(score)) if i not in index_2]
 # On regarde si cela ne représente pas trop de paragraphes
-# print(len(check),"paragraphes n'ont pas de scores, soit",round((len(check)/len(score))*100,2),"%")
+print(len(check),"paragraphes n'ont pas de scores, soit",round((len(check)/len(score))*100,2),"%")
 
 # On prend les paragraphes sur lesquels on va vraiment travailler
-# text_clean_prime=[text_clean[i] for i in index_2]
+text_clean_prime=[text_clean[i] for i in index_2]
 # Nombre de phrases dans les paragraphes nettoyés 
-# nombre_phrase_text_clean_prime=[len(i) for i in text_clean_prime]
-# trace=[(i,dico_test['trace'][i]) for i in range(len(text_clean_prime)) if dico_test['trace'][i]>0]
+nombre_phrase_text_clean_prime=[len(i) for i in text_clean_prime]
+trace=[(i,dico_test['trace'][i]) for i in range(len(text_clean_prime)) if dico_test['trace'][i]>0]
 # Première trace
-# trace=[i for i in dico_test['trace'] if i>0]
+trace=[i for i in dico_test['trace'] if i>0]
+#%%
+pickle.dump(index_1,open('index_1.pickle','wb'))
+pickle.dump(index_2,open('index_2.pickle','wb'))
 
+
+#%%
 # Redécoupage des paragraphes pour mettre au même niveau de comparaison
 # P=[nombre_phrase_input[0:trace[0]]]
 # print(P)
@@ -217,7 +223,7 @@ os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
 
 # Paragraphes=Parallel(psutil.cpu_count())(delayed(make_new_paragraphes)(i,j) for i,j in zip(text_clean_prime,trace_finale))
 # pickle.dump(Paragraphes,open('test/Paragraphes.pickle','wb'))
-
+#%%
 ##############################################################################################################
 ##### 3. Métriques des modèles non-neuronaux #################################################################
 ##############################################################################################################
@@ -225,7 +231,6 @@ os.chdir("C:\\Users\\theo.roudil-valentin\\Documents\\Resume\\MLSUM")
 Paragraphes=pickle.load(open('test/Paragraphes.pickle','rb'))
 Paragraphes=functools.reduce(operator.iconcat, Paragraphes, [])
 
-from fats import Make_Embedding
 from transformers import CamembertTokenizer,CamembertModel
 tok=CamembertTokenizer('MLSUM_tokenizer.model')
 camem=CamembertModel.from_pretrained("camembert-base")

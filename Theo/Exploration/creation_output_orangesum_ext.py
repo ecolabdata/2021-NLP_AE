@@ -3,6 +3,8 @@
 #### Création d'un vecteur de similarité article/résumé pour supervisation extractive ###################
 #########################################################################################################
 
+# Première ébauche de ce qui deviendra le processus de création d'output qui se trouve dans le fichier fats.py
+# Ici, ce sont les balbutiements, mais cela est peut-être plus clair qu'ensuite
 
 chemin_d="C:/Users/theo.roudil-valentin/Documents/OrangeSum/"
 import time
@@ -122,6 +124,7 @@ W2V=gensim.models.Word2Vec(size=d,window=fenetre,min_count=minimum)
 W2V.build_vocab(sentence)
 W2V.train(sentence,total_examples=W2V.corpus_count,epochs=25)
 #%%
+# On définit notre fonction de similarité (plus tard, nous utiliserons celle de torch)
 def euclid(x):
     import numpy as np
     d=np.sqrt(sum([i**2 for i in x]))

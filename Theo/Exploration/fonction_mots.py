@@ -1,3 +1,10 @@
+################################################################################################
+###  Code sur le topic modelling  ##########################################################################
+################################################################################################
+
+#Quelques fontions développées au début du stage pendant que Ruben et moi travaillions
+# sur le topic modelling
+
 #%%
 import pandas as pd
 import numpy as np

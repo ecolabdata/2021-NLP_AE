@@ -1,3 +1,9 @@
+################################################################################################
+###  Code sur le topic modelling  ##########################################################################
+################################################################################################
+
+# Code de développement des approches de topic modelling avant que Ruben prenne le lead sur le sujet
+
 #%%
 import pandas as pd
 import numpy as np

@@ -1,3 +1,14 @@
+################################################################################################
+###  Code d'essai de création de variables des docs HTML  ##########################################################################
+################################################################################################
+
+# Ce code est une ébauche, je l'ai développé quand nous cherchions à créer les variables
+# provenant des caractéristiques des docs HTML.
+# L'idée est d'utiliser ces caractéristiques et de les encoder, par exemple dans des indicatrices.
+# du type, si tel carac est là, mettre 1 sinon 0 etc...
+# Il peut y avoir aussi des variables quantitatives (taille de la police)
+# Nous avons au final pris le code de Ruben qui était meilleur 
+
 #%%
 import pandas as pd
 import numpy as np

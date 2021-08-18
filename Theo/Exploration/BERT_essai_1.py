@@ -1,4 +1,13 @@
+################################################################################################
+###  Prise en main des modèles BERT et des Tokenizers  ##########################################################################
+################################################################################################
+
+# Différents essais pour prendre en main le modèle CamemBERT et les tokenizers
+
 #%%
+
+# Ici il faut avoir télécharger en local camembert, il est possible de le télécharger directement et plus simplement
+# Voir plus bas, car ce n'est pas fairseq que nous allons utiliser au final
 import torch
 from fairseq.models.roberta import CamembertModel
 camembert_path='C:/Users/theo.roudil-valentin/.cache/torch/hub/camembert-base/'

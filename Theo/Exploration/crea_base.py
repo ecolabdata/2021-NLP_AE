@@ -1,3 +1,6 @@
+# Création de la base de données des docs en HTML pour utilisation extraction sommaire
+
+
 #%%
 import pandas as pd
 import numpy as np
