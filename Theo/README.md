@@ -6,15 +6,15 @@ Bienvenue dans le dossier de Théo Roudil-Valentin contenant tous les travaux co
 
 Vous trouverez tous les éléments de codes permettant de produire des résumés.
 
-# Table of contents
+# Table des matières
 1. [Contenu du dossier](#contenu)
 2. [Prise en main](#prise)
 3. [Le résumé automatique](#resume)
     1. [Approches](#approches)  
-        1.[Deep Learning Oriented Extractive Summarizer](#appDL)  
-        2.[TextRank Extractive Summarizer](#appTR)  
-        3.[BertScore](#appBS)  
-        4.[Lead-3 & RandomSummary](#appL3)  
+        a.[Deep Learning Oriented Extractive Summarizer](#appDL)  
+        b.[TextRank Extractive Summarizer](#appTR)  
+        c.[BertScore](#appBS)  
+        d.[Lead-3 & RandomSummary](#appL3)  
     2. [Résultats](#resultats)  
 4. [Sources et citations](#source) 
 5. [Contacts](#contact)
