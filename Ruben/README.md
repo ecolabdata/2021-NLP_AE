@@ -5,7 +5,7 @@ Date de la dernière modification : **05/08/2021**
 
 Bienvenue dans le dossier de Ruben Partouche contenant les exemples d'utilisation des codes présents dans Pipeline/Enjeux
 
-[Pipelin\\Enjeux\\topicmodeling_pipe.py](../2021-NLP_AE/Pipeline/Enjeux/topicmodeling_pipe.py)
+[Pipeline/Enjeux/topicmodeling_pipe.py](./Pipeline/Enjeux/topicmodeling_pipe.py)
 Code principal contenant la classe CorExBoosted qui encapsule un certain nombre d'améliorations utiles sur notre problème.
 
 # Table des Matières
