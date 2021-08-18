@@ -10,16 +10,16 @@ Code principal contenant la classe CorExBoosted qui encapsule un certain nombre 
 
 # Table des Matières
 1. [Contenu du dossier](#contenu)
-2. [L'approche de l'analyse des enjeux](#approches)
+2. [L'approche de l'analyse des enjeux](#approches)  
     1. [Algorithme, paramètres, métriques](#a1)  
-    2. [Enrichissement](#a2) 
-        a.[Calcul de similarité](#a21)
-    3. [Stratification et augmentation des données](#a3)  
-        a.[Stratification des données](#a31)  
+    2. [Enrichissement](#a2)  
+        a.[Calcul de similarité](#a21)  
+    3. [Stratification et augmentation des données](#a3)    
+        a.[Stratification des données](#a31)   
         b.[Augmentation des données](#a32)  
-    4. [Bagging et boosting](#a4)
-        a.[Bagging](#a41)
-        b.[Boosting](#a42)
+    4. [Bagging et boosting](#a4)  
+        a.[Bagging](#a41)  
+        b.[Boosting](#a42)  
     5. [Suite du projet](#a5) 
 
 
