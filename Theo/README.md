@@ -108,6 +108,7 @@ Le second, RandomSummary (RS), consiste à sélectionner les phrases aléatoirem
 
 ### 2. Résultats 
 |Métriques| L3  | RS  | TRW  | TRB  | BS  | Multi | Simple | SMHA | Net |
+|---|---|---|---|---|---|---|---|---|---|
 True Positive Mean|0.0120|0.0110|0.0118|0.0118|0.0117|0.0119|0.0117|**0.0161**|
 False Positive Mean| 0.1874  | **0.1757**  | 0.1876  |  0.1876 | 0.1876  |0.1875|0.1861|0.1877|0.2562|
 False Negative Mean|  0.0473 |  0.0483 | 0.0475  | 0.0475  |  0.0475 |0.0476|0.0474|0.0476|**0.0432**|
