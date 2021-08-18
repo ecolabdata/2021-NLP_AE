@@ -1,6 +1,6 @@
 # Dossier Exploration - Résumé automatique
 
-Date de la dernière modification : **26/07/2021**
+Date de la dernière modification : **18/08/2021**
 
 Bienvenue dans le dossier d'Exploration de Théo Roudil-Valentin contenant tous les travaux préliminaires concernant le résumé automatique.
 
