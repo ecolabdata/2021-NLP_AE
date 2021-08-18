@@ -1,6 +1,6 @@
 # Dossier Théo - Résumé automatique
 
-Date de la dernière modification : **03/08/2021**
+Date de la dernière modification : **18/08/2021**
 
 Bienvenue dans le dossier de Théo Roudil-Valentin contenant tous les travaux concernant le résumé automatique.
 
