@@ -15,7 +15,7 @@ Vous trouverez tous les éléments de codes permettant de produire des résumés
         2.[TextRank Extractive Summarizer](#appTR)  
         3.[BertScore](#appBS)  
         4.[Lead-3 & RandomSummary](#appL3)  
-    2.[Résultats](#resultats)  
+    2. [Résultats](#resultats)  
 4. [Sources et citations](#source) 
 5. [Contacts](#contact)
 
