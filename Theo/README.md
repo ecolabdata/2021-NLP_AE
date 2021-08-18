@@ -6,14 +6,29 @@ Bienvenue dans le dossier de Théo Roudil-Valentin contenant tous les travaux co
 
 Vous trouverez tous les éléments de codes permettant de produire des résumés.
 
+# Table of contents
+1. [Contenu du dossier](#contenu)
+2. [Prise en main](#prise)
+3. [Le résumé automatique](#resume)
+    1. [Approches](#approches)
+        1.[Deep Learning Oriented Extractive Summarizer](#appDL)
+        2.[TextRank Extractive Summarizer](#appTR)
+        3.[BertScore](#appBS)
+        4.[Lead-3 & RandomSummary](#appL3)
+    2.[Résultats](#resultats)
+4. [Sources et citations](#source) 
+5. [Contacts](#contact)
+
 **French Automatic Text Summarizer (fats)**  
 Le code __fats.py__ est le module regroupant un ensemble de classes et fonctions lié au projet notamment pour le nettoyage, la préparation du texte et le développement et l'application des modèles. Il est indispensable pour tous les fichiers qui se trouvent dans ce dossier. 
+
+
+## Listes des codes et applications :
+<a name="contenu"></a>
 
 Ce dossier contient des codes et un dossier :
 * **Exploration** : qui contient l'ensemble des codes préliminaires qui ont amené au travail abouti que vous avez ci plus haut. Je les laisse à but informatif et de compréhension.
 * **Model** : qui contient certains des modèles nécessaires pour faire tourner les fonctions de résumés. Malheureusement, étant donné la limite d'espace de git, je n'ai pas pu mettre tous les modèles disponibles. Si vous faîtes partie du CGDD, vous pouvez y accéder via le fichier setup.py. Si vous faîtes partie du MTE, vous devez pouvoir en demander l'accès, ou demander à l'équipe de l'Ecolab de vous fournir les données. Si vous êtes extérieur, vous pouvez demander à l'équipe de vous les envoyer par un lien de téléchargement.
-
-## Listes des codes et applications :
 
 * __Note_technique.pdf__ : note concernant la stratégie envisagée pour le traitement Deep Learning du résumé, expliquant l'esprit et la méthode du travail. Elle n'est plus vraiment à jour, et à ce titre, les explications ci-dessous sont plus récentes, mais elle éclaire mieux de manière conceptuelle les problèmes que nous rencontrons et les éventuelles solutions. De même, une grande partie concerne les briques fondamentales des modèles que l'on va utiliser : les modèles BERT, l'attention, les transformers etc...
 * __Paragraphes_exemple.pickle__ : exemple de paragraphes pour les deux pipelines résumés. 
@@ -22,7 +37,7 @@ Ce dossier contient des codes et un dossier :
 * __fats.py__ : fichier **module**, c'est-à-dire comportant l'aboutissement de tout le travail fonctionnel sur le résumé. Il rassemble toutes les fonctions utiles pour cela. Il est appelé très souvent au sein des codes aboutis, donc pensez à bien le mettre dans votre dossier.
 
 ## Prise en main 
-
+<a name="prise"></a>
 Pour prendre en main ce dossier vous devez :
 * **1.** d'abord cloner le repository en local (dans votre invite de commandes windows, mettez vous dans votre dossier choisi et entrez : **git clone https://github.com/ecolabdata/2021-NLP_AE.git** , attention au proxy si vous êtes au bureau 😉 ! ) ;
 * **2.** avoir installé une version de python (conseil : la 3.6.7 64-bit) ;
@@ -39,14 +54,14 @@ Une fois que cela est fait, vous pouvez lancer les exemples.
 Vous pourrez de même introduire vos propres données (attention au format et à la dimension, mais cela est indiqué dans les pipelines).
 
 ## L'approche du résumé automatique
-
+<a name="resume"></a>
 
 Le résumé pratiqué ici est extractif, en accord avec les auditeurs de la DREAL Bretagne. C'est-à-dire que l'on sélectionne les phrases les plus pertinentes de chaque paragraphe.
 
 Nous avons développés ici 4 types de modèles. Certains sont assez simples, d'autres basés sur des techniques modernes de Deep Learning.  
 
 ### 1. Les approches et les méthodes associées
-
+<a name="approches"></a>
 * **1.1** Une famille de modèles basées sur du __Deep Learning__
 * **1.2** Un modèle utilisant l'algorithme TextRank
 * **1.3** Un modèle basé sur la similarité de l'embedding des phrases
@@ -60,6 +75,7 @@ C'est pourquoi nous avons enlevé les éléments suivants :
 * les articles et autres mots __vides__ (c'est-à-dire présent trop souvent pour apporter de l'information)
 
 #### 1.1 - Deep Learning Oriented Extractive Summarizer (DLOES)
+<a name="appDL"></a>
 Ces dernières années, les techniques de Deep Learning appliquées au traitement du langage naturel se sont largement développés et proposent des outils désormais très puissants. Dans cette même veine, l'Ecolab a décidé de tenter la création d'un modèle de Deep Learning pour extraire les phrases importantes d'un paragraphe.  
 
 Le travail débute par plusieurs étapes de pre-processing :
@@ -90,6 +106,7 @@ L'optimiseur est un [AdamW](https://pytorch.org/docs/stable/generated/torch.opti
 Les modèles sont entraînés sur les données [MLSUM](https://github.com/huggingface/datasets/tree/master/datasets/mlsum), sur des batch de taille 64, sur un GPU NVIDIA disponible sur le datalab [Onyxia](https://datalab.sspcloud.fr/home) du [SSP Cloud](https://www.sspcloud.fr/).
 
 #### 1.2 - TextRank for Extractive Summarizer (TRES)
+<a name="appTR"></a>
 Nous avons appliqué le modèle TextRank, dérivation du modèle PageRank de Google sur des données textuelles pour de l'extraction de mots-clés ou phrases, à nos données MLSUM. Ce dernier modèle est basé sur la théorie des graphes et propose d'étudier les relations entre différents objets. TextRank prend comme objets des phrases ou des mots par exemples. Dans notre cas, nous sommes intéressés par l'extraction de phrases. Donc nos objets, formellement nos sommets (__vertices__), sont donc nos phrases de paragraphe. L'algorithme va donc chercher des liens d'importance au sein d'un réseau. Avant toute chose il convient donc d'obtenir ce réseau.
 
 Dans le cas de l'extraction de phrases, cela peut être une matrice de similarité entre les phrases. Pour cela nous avons besoin d'un embedding. Nous avons choisi deux embeddings différents, qui aboutissent donc à deux modèles différents : TRW (pour TextRankWord2Vec) basé sur l'embedding de Word2Vec, et TRB (pour TextRankBert), quant à lui basé sur CamemBERT. Une fois les embeddings obtenus, il suffit de calculer la similarité, cosinus dans notre cas, entre les phrases pour obtenir la matrice, soit le réseau.
@@ -98,6 +115,7 @@ Une fois le réseau obtenu, nous avons appliqué l'algorithme PageRank disponibl
 
 Dans notre cas, le graphe est pondéré, car la relation entre deux phrases n'est pas binaire, mais représenté la force de la similarité. Le score pondéré est introduit par les auteurs de TextRank (voir [Sources](#sources)).
 #### 1.3 - BertScore
+<a name="appBS"></a>
 Ce modèle propose d'extraire les phrases les plus importantes de manière rudimentaire. Comme expliqué plus haut, les phrases doivent passer par un processus pour être transformés en vecteurs. D'abord la tokenization, puis l'embedding via CamemBERT. L'idée est de choisir les phrases qui représentent le mieux l'idée générale du paragraphe. En termes vectorielles, supposons qu'il existe un vecteur qui représente parfaitement __l'idée principale__ du paragraphe, on cherche à extraire les vecteurs qui sont les plus proches de ce __vecteur idée principale__ et ainsi faire émerger les phrases les plus importantes.  
 La question désormais est : **comment obtenir ce vecteur idée générale** ? Il convient d'en chercher une approximation _suffisante_, c'est-à-dire suffisamment bonne pour que les résumés aient du sens et soient utilisables. Notre proposition est d'utiliser la moyenne des représentations vectorielles des phrases comme approximation de l'idée générale.   
 Ce modèle repose donc sur l'hypothèse suivante : **la moyenne des représentations vectorielles des phrases constitue une approximation suffisamment bonne du vecteur de l'idée principale.**
@@ -105,10 +123,12 @@ Ce modèle repose donc sur l'hypothèse suivante : **la moyenne des représentat
 Une fois ce proxy obtenu, nous pouvons calculer la similarité cosinus de chaque phrase à cette _idée principale_. Le résumé consiste alors en les phrases les plus proches de cette dernière.
 
 #### 1.4 - Lead-3 et RandomSummary
+<a name="appL3"></a>
 Le premier consiste simplement à prendre les trois premières phrases d’un paragraphe. L’hypothèse sous jacente est que l’information importante est souvent énoncée dès le début d’un paragraphe et ce pour annoncer au lecteur la teneur principale du paragraphe considéré.
 Le second, RandomSummary (RS), consiste à sélectionner les phrases aléatoirement dans le paragraphe. Il constitue ainsi un le premier plancher que les différents modèles précédents devront surpasser. En effet, ces derniers doivent, pour être intéressants, être plus performant que le hasard. Le modèle Lead-3 constitue donc un second plancher qualitatif à dépasser.
 
 ### 2. Résultats 
+<a name="resultats"></a>
 |Métriques| L3  | RS  | TRW  | TRB  | BS  | Multi | Simple | SMHA | Net |
 |---|---|---|---|---|---|---|---|---|---|
 True Positive Mean|0.0120|0.0110|0.0118|0.0118|0.0118|0.0117|0.0119|0.0117|**0.0161**|
@@ -130,5 +150,5 @@ F1|0.0834|0.0795|0.0809|0.0809|0.0809|0.0808|0.0832|0.0804|**0.0896**|
 [Neural Machine Translation by Jointly Learning to Align and Translate (Attention)](https://arxiv.org/abs/1409.0473)
 [Attention Is All You Need (Transformers)](https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf)
 ## Contacts
-
+<a name="contact"></a>
 [Théo Roudil-Valentin](mailto:theo.roudil-valentin@ensae.fr)
