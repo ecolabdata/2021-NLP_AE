@@ -15,7 +15,7 @@ Ce dossier contient des codes et un dossier :
 
 ## Listes des codes et applications :
 
-* __Note_technique.pdf__ : note concernant la stratégie envisagée pour le traitement Deep Learning du résumé, expliquant l'esprit et la méthode du travail.
+* __Note_technique.pdf__ : note concernant la stratégie envisagée pour le traitement Deep Learning du résumé, expliquant l'esprit et la méthode du travail. Elle n'est plus vraiment à jour, et à ce titre, les explications ci-dessous sont plus récentes, mais elle éclaire mieux de manière conceptuelle les problèmes que nous rencontrons et les éventuelles solutions. De même, une grande partie concerne les briques fondamentales des modèles que l'on va utiliser : les modèles BERT, l'attention, les transformers etc...
 * __Paragraphes_exemple.pickle__ : exemple de paragraphes pour les deux pipelines résumés. 
 * __pipeline_final.ipynb__ : code permettant de lancer la fonction finale de résumé. Vous avez un large choix de modèles, qui sont disponibles dans le dossier [Model](./Model). De plu vous avez un exemple présent dans ce dossier.
 * __pipeline_DL.ipynb__ : code permettant de lancer la fonction de résumé Deep Learning.
@@ -127,7 +127,8 @@ F1|0.0834|0.0795|0.0809|0.0809|0.0809|0.0808|0.0832|0.0804|**0.0896**|
 [Decoupled Weight Decay Regularization (AdamW)](https://arxiv.org/abs/1711.05101)  
 [TextRank: Bringing Order into Texts](https://aclanthology.org/W04-3252.pdf)  
 [The anatomy of a large-scale hypertextual Web search engine (PageRank)](https://www.sciencedirect.com/science/article/pii/S016975529800110X)
-
+[Neural Machine Translation by Jointly Learning to Align and Translate (Attention)](https://arxiv.org/abs/1409.0473)
+[Attention Is All You Need (Transformers)](https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf)
 ## Contacts
 
 [Théo Roudil-Valentin](mailto:theo.roudil-valentin@ensae.fr)
