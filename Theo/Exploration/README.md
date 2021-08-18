@@ -16,26 +16,19 @@ Tous les modèles ou données cités sont sourcés en bas de la page, n'hésitez
 * __BERT_Score.ipynb__ : Jupyter introduisant le modèle **BertScore** et notamment son esprit (l'idée générale du paragraphe via le proxy de la moyenne des représentations vectorielles des phrases).
 * __BERT_essai_1.py__ : prise en main des modèles Bert/CamemBERT, des modules torch et fairseq. Petite analyse du nombre de tokens par phrase : c'est-à-dire en combien de bout les tokenizers classiques coupent nos phrases (ceux des études d'impacts). Essai de concaténation à la main de tokens : pas concluants, quelque chose de plus simple est proposé dans __BARThez_BERTSUM.py__ (et finalement dans __fats.py__). Prise en main des tokenizers vierges (à entraîner) puis essais d'application CamemBERT.
 * __BERT_fine_tuning_1.py__ : différents essais de __réglage de précision (fine-tuning)__ de Camembert dans une optique non-supervisé (**non-concluant**).
-* __BERT_from_scratch.py__ : ébauche de création d'un modèle BERT pour le MTE (**non-concluant**).
-* __BERT_nonsupervise.py__ : Jupyter ébauche de modèles K-Means et Gaussian Mixture sur l'embedding fourni par CamemBERT (non poursuivi).
-* __BERT_score.py__ : première ébauche du code __BERT_Score.ipynb__, veuillez vous y référer directement.
-* __BertSum.py__ : briques de modèles provenant directement de https://github.com/nlpyang/BertSum/blob/master/src/models/encoder.py.
-* __FUES.model__ : tokenizer entraîné sur les données OrangeSum (voir __BARThez_BERTSUM.py__).
-* __FUES.vocab__ : vocabulaire du tokenizer entraîné sur les données OrangeSum (voir __BARThez_BERTSUM.py__).
+* __BERT_nonsupervise.ipynb__ : Jupyter ébauche de modèles K-Means et Gaussian Mixture sur l'embedding fourni par CamemBERT (non poursuivi).
 * __MLSUM_prep.ipynb__ : Jupyter pour la préparation et le nettoyage des données MLSUM et notamment leur adaptation à notre cas de résumé extractif pour __Deep Learning__. 
 * __MLSUM_prep.py__ : Téléchargement des données MLSUM, découpage pour préparation plus rapide des données (car très volumineuses) puis différentes boucles de création d'output pour le résumé extractif.
-* __Pipe_resume_vf.py__ :
 * __Stat_sommaire.py__ : code permettant de produire quelques statistiques rapides sur les données disponibles et retravaillées des études d'impact.
 * __TextRank_essai_1.py__ : code de création et de développement du modèle de résumé TextRank avec deux embedding différents.
+* __comparaison.ipynb__ : comparaison des métriques des différents modèles (une bonne partie a été perdue).
 * __compter_pages.py__ : quelques statistiques sur le nombre de pages des documents présents.
 * __crea_base.py__ : code de création de la base de données des html de toutes les études OCRisées, une ligne par html et gestion des études mal OCRisées.
 * __creation_output_orangesum_ext.py__ : préparation des données OrangeSum et notamment création de l'output pour utilisation en résumé extractif.
-* __decoupage_essai.py__ : essai de découpages des études une fois le sommaire associé récupéré.
 * __diving_into_html.py__ : premiers travaux sur la matière brut des études d'impact en html, notamment recherche de balises etc...
-* __essai_DL.py__ : quelques essais de deep learning en Keras et TensorFlow.
-* __essai_en_tout_genres.py__ :
 * __fonction_mots.py__ : premiers travaux sur les thèmes des documents et élaboration de fonctions associées.
 * __gpu_essai_1.ipynb__ : premier jupyter concernant l'entraînement sur GPU des modèles de deep learning. 
+* __make_metrics.ipynb__ : code produisant les sorties de tous les modèles pour pouvoir ensuite les comparer (contient aussi des corrections de certaines fonctions).
 * __make_metrics.py__ : code produisant les sorties de tous les modèles pour pouvoir ensuite les comparer (contient aussi des corrections de certaines fonctions).
 * __make_train_dataset.py__ : code permettant de faire rapidement les __data loader__ (des objets torch pour l'entraînement des modèles DL).
 * __pipeline_resume.py__ : code présentant la pipeline résumé avec un exemple fonctionnel.
