@@ -107,20 +107,22 @@ Le premier consiste simplement à prendre les trois premières phrases d’un pa
 Le second, RandomSummary (RS), consiste à sélectionner les phrases aléatoirement dans le paragraphe. Il constitue ainsi un le premier plancher que les différents modèles précédents devront surpasser. En effet, ces derniers doivent, pour être intéressants, être plus performant que le hasard. Le modèle Lead-3 constitue donc un second plancher qualitatif à dépasser.
 
 ### 2. Résultats 
-|   |   |   |   |   |
-|---|---|---|---|---|
-|   |   |   |   |   |
-|   |   |   |   |   |
-|   |   |   |   |   |
+|Métriques| L3  | RS  | TRW  | TRB  | BS  | Multi | Simple | SMHA | Net |
+True Positive Mean|0.0120|0.0110|0.0118|0.0118|0.0117|0.0119|0.0117|**0.0161**|
+False Positive Mean| 0.1874  | **0.1757**  | 0.1876  |  0.1876 | 0.1876  |0.1875|0.1861|0.1877|0.2562|
+False Negative Mean|  0.0473 |  0.0483 | 0.0475  | 0.0475  |  0.0475 |0.0476|0.0474|0.0476|**0.0432**|
+Precision| **0.0606**  | 0.0585  | 0.0587  |  0.0587 | 0.0587  |0.0587|0.0604|0.0584|0.0587|
+Recall|0.1973|0.1849|0.1978|0.1972|0.1974|0.1966|0.2000|0.1962|**0.2692**|
+F1|0.0834|0.0795|0.0809|0.0809|0.0809|0.0808|0.0832|0.0804|**0.0896**|
 ## Sources et citations
 <a name="sources"/></a>
 
 [Camembert: a tasty french language model](https://arxiv.org/abs/1911.03894)  
 [SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226)  
 [MLSUM: The Multilingual Summarization Corpus](https://arxiv.org/abs/2004.14900)  
-[BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
-[Decoupled Weight Decay Regularization (AdamW)](https://arxiv.org/abs/1711.05101)
-[TextRank: Bringing Order into Texts](https://aclanthology.org/W04-3252.pdf)
+[BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)  
+[Decoupled Weight Decay Regularization (AdamW)](https://arxiv.org/abs/1711.05101)  
+[TextRank: Bringing Order into Texts](https://aclanthology.org/W04-3252.pdf)  
 [The anatomy of a large-scale hypertextual Web search engine (PageRank)](https://www.sciencedirect.com/science/article/pii/S016975529800110X)
 
 ## Contacts
