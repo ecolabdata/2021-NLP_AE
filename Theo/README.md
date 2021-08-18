@@ -146,9 +146,9 @@ F1|0.0834|0.0795|0.0809|0.0809|0.0809|0.0808|0.0832|0.0804|**0.0896**|
 [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)  
 [Decoupled Weight Decay Regularization (AdamW)](https://arxiv.org/abs/1711.05101)  
 [TextRank: Bringing Order into Texts](https://aclanthology.org/W04-3252.pdf)  
-[The anatomy of a large-scale hypertextual Web search engine (PageRank)](https://www.sciencedirect.com/science/article/pii/S016975529800110X)
-[Neural Machine Translation by Jointly Learning to Align and Translate (Attention)](https://arxiv.org/abs/1409.0473)
-[Attention Is All You Need (Transformers)](https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf)
+[The anatomy of a large-scale hypertextual Web search engine (PageRank)](https://www.sciencedirect.com/science/article/pii/S016975529800110X)  
+[Neural Machine Translation by Jointly Learning to Align and Translate (Attention)](https://arxiv.org/abs/1409.0473)  
+[Attention Is All You Need (Transformers)](https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf)  
 ## Contacts
 <a name="contact"></a>
 [Théo Roudil-Valentin](mailto:theo.roudil-valentin@ensae.fr)
