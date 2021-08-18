@@ -1,3 +1,6 @@
+# Premier Pipeline Résumé pour utilisation dans app finale
+# version obsolète voir premier dossier
+
 #%%
 from joblib.parallel import cpu_count
 import pandas as pd

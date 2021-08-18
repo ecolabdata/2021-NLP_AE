@@ -1,3 +1,9 @@
+# Code sur la création des inputs sur les données OrangeSum
+# Développement d'un processus d'adaptation pour utilisation DL
+# Que nous allons garder sur les données MLSUM, car besoin du même principe
+
+
+
 ###################################################################################################"
 ######### Création séquence pour BERT
 ####################################################################################################"

@@ -1,3 +1,5 @@
+# Code permettant de faire rapidement le DataLoader pour l'entraînement DeepLearning
+
 #%%
 from joblib.parallel import cpu_count
 import pandas as pd

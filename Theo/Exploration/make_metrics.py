@@ -1,3 +1,7 @@
+
+# Premier code pour faire les métriques des différents modèles
+# il existe aussi un notebook, qui poursuit, et un autre code, plus élaboré et concis
+
 #%%
 from joblib.parallel import cpu_count
 import pandas as pd
