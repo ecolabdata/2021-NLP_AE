@@ -797,18 +797,31 @@ class TextRank():
       mat=self.get_matrix_section(article_,W2V,verbose)
       return mat
    @staticmethod
-   def scores(matrice_similarite,nx=nx,k=3):
-      graph=nx.from_numpy_array(np.array(matrice_similarite))
-      scores=nx.pagerank_numpy(graph)
-      rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
-      rank=[s[0] for s in rank]
-      return rank
+   def scores(matrice_similarite,nx=nx,k=3,weights=True,alpha=0.1,frac=0.25):
+        graph=nx.from_numpy_array(np.array(matrice_similarite))
+        scores=nx.pagerank_numpy(graph)
+        if weights:
+            l=matrice_similarite.size()[0]
+            w=torch.ones(l)
+            x1=int(frac*l)
+            x2=int((1-frac)*l)
+            w[:x1]=torch.mul(w[:x1],(1+alpha))
+            w[x2:]=torch.mul(w[x2:],(1+alpha))
+
+            scores=torch.tensor(list(scores.values()))
+            scores_new=torch.mul(scores,w)
+            rank=scores_new.topk(k)[1]
+            return rank
+        else:
+            rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
+            rank=[s[0] for s in rank]
+            return rank
    
-   def make_resume(self,article,type,modele,k=3,verbose=1,get_score=False,get_score_only=False,s=70):
+   def make_resume(self,article,type,modele,k=3,verbose=1,get_score=False,get_score_only=False,s=70,weights=True,alpha=0.1,frac=0.25):
       if type=='bert':
          b,d=self.make_embedding_bert(article,modele,seuil=s)
          mb=self.mat_sim(b)#[self.mat_sim(h) for h in b]
-         sb=self.scores(mb,k=k)#[self.scores(m,k=k) for m in mb]
+         sb=self.scores(mb,k=k,weights=weights,alpha=alpha,frac=frac)#[self.scores(m,k=k) for m in mb]
          if get_score:
             resume=[article[i] for i in sb]#[[article[k][i] for i in sb[k]] for k in range(len(sb))]
             if len(resume)==1:
@@ -830,7 +843,7 @@ class TextRank():
          assert modele!=None
          w=self.make_embedding_W2V(article,modele,verbose)
          mw=self.mat_sim(w)#[self.mat_sim(k) for k in w]
-         sw=self.scores(mw,k=k)#[self.scores(m,k=k) for m in mw]
+         sw=self.scores(mw,k=k,weights=weights,alpha=alpha)#[self.scores(m,k=k) for m in mw]
          resume=[article[i] for i in sw]#[[article[k][i] for i in sw[k]] for k in range(len(sw))]
          if get_score:
             if len(resume)==1:
@@ -1589,7 +1602,7 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
         return resu
 
 
-def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False,seuil=70):
+def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False,seuil=70,weights=True,alpha=0.2,frac=0.25):
     '''
     Fonction permettant de produire des résumés sans deep learning.
     @sequence : liste de phrases.
@@ -1608,7 +1621,9 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
                            modele=modele,
                            k=k,
                            get_score_only=get_score_only,
-                           s=seuil)
+                           s=seuil,
+                           weights=weights,
+                           alpha=alpha,frac=frac)
         except:
             print("Êtes-vous certain d'avoir mis le chemin du tokenizer en ayant spécifié que vous vouliez un embedding BERT ?\n Êtes-vous certain d'avoir spécifié un tokenizer correct ?")
     
@@ -1618,7 +1633,10 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
                         type='word2vec',
                         modele=modele,
                         k=k,
-                        get_score_only=get_score_only)
+                        get_score_only=get_score_only,
+                        s=seuil,
+                        weights=weights,
+                        alpha=alpha,frac=frac)
     
     elif type_=='BertScore':
         if modele!=None:
@@ -1644,7 +1662,7 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
     res=fnct(sequence)
     return res
 
-def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,s=True,t=True,seuil=2,lem=False,sc=3): #,camem=None
+def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,s=True,t=True,seuil=2,lem=False,sc=3,weights=True,alpha=0.2,frac=0.25): #,camem=None
     '''
     Fonction produisant le résumé. 
     @texte : liste de listes de phrases. Autrement dit, vous avez une liste de paragraphes, vous les tronquez à chaque point, et vous obtenez une liste de liste de phrases.
@@ -1690,7 +1708,9 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,
         empty=[Text[i][1] for i in range(len(Text))]
         end_time=time()
         print("Le processing du text a pris :",round((end_time-start_time)/60,2),"minutes")
-        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,get_score_only=get_score_only)
+        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,
+                            get_score_only=get_score_only,
+                            weights=weights,alpha=alpha,frac=frac)
         
         if get_score_only:
             res=[mur(t) for t in text]
@@ -1761,3 +1781,32 @@ def comparaison(simple3,score_vrai):
     # resultat=[mtp,mfp,mfn,mp,mr,mf]
     
     return [tp,fp,fn,p,r,f]
+
+def make_compa(n,s):
+    sortie_multi=pickle.load(open(n,'rb'))
+
+    if type(sortie_multi[0])!=torch.Tensor:
+        sortie_multi=[torch.tensor(i).to(torch.long) for i in sortie_multi]
+
+    S=[]
+    erreur=[]
+    if len(sortie_multi)==len(s):
+        for i in range(len(s)):
+            try:
+                S.append(make_new_sortie(s[i],sortie_multi[i]))
+            except:
+                print("Unexpected error:", sys.exc_info())
+                break
+                print(i)
+                erreur.append(i)
+
+        try:
+            if erreur[0]==201:
+                s_prime=s[:201]+s[202:]
+                Sta=comparaison(torch.cat(S),torch.cat(s_prime))
+                return Sta
+        except:
+            Sta=comparaison(torch.cat(S),torch.cat(s))
+            return Sta
+    else:
+        print(n)
