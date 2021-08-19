@@ -54,7 +54,12 @@ resu,text_2=fats.Resume(P,
                  tok='MLSUM_tokenizer.model', #le nom du tokenizer
                  modele=W2V, #modèle CamemBERT ou W2V selon le modèle choisi
                  get_score_only=True,# est-ce qu'on veut juste le score et pas directement les phrases
-                 s=True)
+                 s=True,
+                 weights=True, # Pour les modèles TextRank, est-ce qu'on modifie les poids des phrases, 
+                 # en augmentant les phrases présentes aux extrémités ? Oui
+                 alpha=0.2, # Par combien les augmente-t-on ?
+                 frac=0.25) # Quelle partie de la phrase surpondèrons-nous ? frac% du début et (1-frac)% de la fin
+                 
 #%%
 print(resu) 
 text_2

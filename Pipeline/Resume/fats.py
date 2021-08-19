@@ -20,6 +20,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import sys
+import gc
 
 class Word_Cleaning():
       '''
@@ -601,7 +602,7 @@ class Make_Extractive():
                #'clss':test_clss,
                #'clss_index':clss_index_test,
                'output':test_output,
-               'mask_cls':test_mask_cls,
+            #    'mask_cls':test_mask_cls,
                'trace' : trace_test
             }
             # pickle.dump(dico_test,open(self.path+'/dico_test.pickle','wb'))
@@ -717,8 +718,10 @@ class TextRank():
    def make_embedding_bert(self,articles,camem,seuil=70):
       if type(articles[0])==str:
          dico={}
+        #  start=time()
          input_ids,att_mask=self.bert_embedding.make_token(articles,self.cpu)
-            
+        #  end_1=time()
+        #  print("Les tokens ont pris :",round((end_1-start)/60,2),"minutes.")
          if len(input_ids)>seuil: #Au-delà de 70 phrases, camembert plante. On vérifie que le paragraphe en contient moins puis
             #on va découper le paragraphe pour que chaque bout fasse moins de 70
             # d'abord il convient de trouver le chiffre tq len(input_ids)/chiffre<70
@@ -741,12 +744,21 @@ class TextRank():
              embeddings=camem(torch.tensor(input_ids),
                        torch.tensor(att_mask))
              embeddings=embeddings.last_hidden_state.detach().mean(dim=1)
+         
+        #  end_2=time()
+        #  print("L'embedding a pris :",round((end_2-end_1)/60,2),"minutes.")
          return embeddings,dico
       else:
+        #  start=time()
          dico=self.bert_embedding.make_tokens(articles,self.cpu)
          input_ids=dico['input_ids']
          att_mask=dico['attention_mask']
+        #  end_1=time()
+        #  print("Les tokens ont pris :",round((end_1-start)/60,2),"minutes.")
+         
          embeddings=self.bert_embedding.emb_phrase(input_ids,att_mask,camem)
+        #  end_2=time()
+        #  print("L'embedding a pris :",round((end_2-end_1)/60,2),"minutes.")
          return embeddings,dico
    
    @staticmethod
@@ -785,18 +797,31 @@ class TextRank():
       mat=self.get_matrix_section(article_,W2V,verbose)
       return mat
    @staticmethod
-   def scores(matrice_similarite,nx=nx,k=3):
-      graph=nx.from_numpy_array(np.array(matrice_similarite))
-      scores=nx.pagerank_numpy(graph)
-      rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
-      rank=[s[0] for s in rank]
-      return rank
+   def scores(matrice_similarite,nx=nx,k=3,weights=True,alpha=0.1,frac=0.25):
+        graph=nx.from_numpy_array(np.array(matrice_similarite))
+        scores=nx.pagerank_numpy(graph)
+        if weights:
+            l=matrice_similarite.size()[0]
+            w=torch.ones(l)
+            x1=int(frac*l)
+            x2=int((1-frac)*l)
+            w[:x1]=torch.mul(w[:x1],(1+alpha))
+            w[x2:]=torch.mul(w[x2:],(1+alpha))
+
+            scores=torch.tensor(list(scores.values()))
+            scores_new=torch.mul(scores,w)
+            rank=scores_new.topk(k)[1]
+            return rank
+        else:
+            rank=sorted(scores.items(),key=lambda v:(v[1],v[0]),reverse=True)[:k]
+            rank=[s[0] for s in rank]
+            return rank
    
-   def make_resume(self,article,type,modele,k=3,verbose=1,get_score=False,get_score_only=False):
+   def make_resume(self,article,type,modele,k=3,verbose=1,get_score=False,get_score_only=False,s=70,weights=True,alpha=0.1,frac=0.25):
       if type=='bert':
-         b,d=self.make_embedding_bert(article,modele)
+         b,d=self.make_embedding_bert(article,modele,seuil=s)
          mb=self.mat_sim(b)#[self.mat_sim(h) for h in b]
-         sb=self.scores(mb,k=k)#[self.scores(m,k=k) for m in mb]
+         sb=self.scores(mb,k=k,weights=weights,alpha=alpha,frac=frac)#[self.scores(m,k=k) for m in mb]
          if get_score:
             resume=[article[i] for i in sb]#[[article[k][i] for i in sb[k]] for k in range(len(sb))]
             if len(resume)==1:
@@ -818,7 +843,7 @@ class TextRank():
          assert modele!=None
          w=self.make_embedding_W2V(article,modele,verbose)
          mw=self.mat_sim(w)#[self.mat_sim(k) for k in w]
-         sw=self.scores(mw,k=k)#[self.scores(m,k=k) for m in mw]
+         sw=self.scores(mw,k=k,weights=weights,alpha=alpha)#[self.scores(m,k=k) for m in mw]
          resume=[article[i] for i in sw]#[[article[k][i] for i in sw[k]] for k in range(len(sw))]
          if get_score:
             if len(resume)==1:
@@ -843,11 +868,18 @@ class BERTScore():
          self.camem=camem
          self.cosim=cosim
 
-      def make_score(self,article,k=3):
-         b,_=self.make_embedding(article,self.camem)
+      def make_score(self,article,k=3,s=70):
+        #  start=time()
+         b,_=self.make_embedding(article,self.camem,seuil=s)
+        #  end_1=time()
+        #  print("L'embedding a pris :",round((end_1-start)/60,2))
          #b=torch.stack(b)
          VSA=b.mean(dim=0)
+        #  end_2=time()
+        #  print("Le calcul a pris :",round((end_1-end_2)/60,2))
          score=self.cosim(VSA,b)
+        #  end_2=time()
+        #  print("Le calcul de similarité a pris :",round((end_2-end_1)/60,2))
          try:
              score=score.topk(k=k)[1]
          except:
@@ -855,6 +887,8 @@ class BERTScore():
                 score=score.topk(k=k-1)[1]
             except:
                 score=score.topk(k=k-2)[1]
+        #  end_3=time()
+        #  print("La récupération des scores a pris :",round((end_3-end_2)/60,2))
          return score
       
       def make_summary(self,article,k=3):
@@ -998,7 +1032,8 @@ class F1_score:
         Caclul le nombre moyen de vrai positif de la prediction x par rapport aux labels y (binaires).
         '''
         tp=torch.mul(x,y).sum()
-        tpm=torch.div(tp,y.shape[0])
+        k=y.sum()
+        tpm=torch.div(tp,k)#y.shape[0])
         return tpm
     @staticmethod
     def false_positive_mean(x,y) -> torch.tensor:
@@ -1009,7 +1044,13 @@ class F1_score:
         fp=torch.sub(x,y)
         fp=torch.max(fp,torch.tensor([0.]).to(device))
         fp=fp.sum().float()
-        fpm=torch.div(fp,y.shape[0])
+        numneg=y.shape[0]-y.sum()
+        fpm=torch.div(fp,numneg)#y.shape[0])
+        if numneg==0: # Pour éviter division par 0
+            if fp==0: # Si fp==0 et numneg==0, alors on est bon
+                return torch.tensor(0)
+            if fp!=0: # alors fp==1, et on n'est pas bon
+                return torch.tensor(0)
         return fpm
     @staticmethod
     def false_negative_mean(x,y) -> torch.tensor:
@@ -1020,24 +1061,36 @@ class F1_score:
         device=y.device
         fn=torch.max(fn,torch.tensor([0.]).to(device))
         fn=fn.sum().float()
-        fnm=torch.div(fn,y.shape[0])
+        numpos=y.sum()
+        fnm=torch.div(fn,numpos)#y.shape[0])
         return fnm
     #@staticmethod
     def precision(self,x,y) -> torch.tensor:
         device=y.device
-        tp=self.true_positive_mean(x,y)
-        fp=self.false_positive_mean(x,y)
-        if (tp+fp)!=0:
-            prec=torch.div(tp,(tp+fp))
-            return prec
-        else:
-            return torch.tensor(0.).to(device)
+        tp=torch.mul(x,y).sum()
+        fp=torch.sub(x,y)
+        fp=torch.max(fp,torch.tensor([0.]).to(device))
+        fp=fp.sum().float()
+        return torch.div(tp,tp+fp)
+        # tp=self.true_positive_mean(x,y)
+        # fp=self.false_positive_mean(x,y)
+        # if (tp+fp)!=0:
+        #     prec=torch.div(tp,(tp+fp))
+        #     return prec
+        # else:
+        #     return torch.tensor(0.).to(device)
 
     def recall(self,x,y) -> torch.tensor:
-        tp=self.true_positive_mean(x,y)
-        fn=self.false_negative_mean(x,y)
+        tp=torch.mul(x,y).sum()
+        fn=torch.sub(y,x)
+        device=y.device
+        fn=torch.max(fn,torch.tensor([0.]).to(device))
+        fn=fn.sum().float()
+        #self.true_positive_mean(x,y)
+        # fn=self.false_negative_mean(x,y)
         rec=torch.div(tp,(tp+fn))
         return rec
+
     def __call__(self,x,y) -> torch.tensor:
         device=y.device
         rec=self.recall(x,y)
@@ -1420,7 +1473,7 @@ def make_text(texte,j=5,s=True,t=True,seuil=2,lem=False,sc=3):
 #     else:
 #         return text,empty
 
-def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False):
+def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,x=3,time_=False):
     '''
     Fonction permettant d'utiliser les modèles de Deep Learning en torch pour produire des résumés automatiques.
     @texte : une liste de phrases ou une liste de listes de phrases.
@@ -1434,7 +1487,7 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
     @tr : dummy pour l'entraînement, fixé à False donc.
     @get_score_only : dummy pour ne récupérer que les index des phrases et non les phrases elles-mêmes.    
     '''
-    
+    s1=time()
     try :
         assert choose_model in ['SMHA','Simple','Net','Multi']
     except:
@@ -1448,17 +1501,22 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
     if camem==None:
         from transformers import CamembertModel
         camem=CamembertModel.from_pretrained("camembert-base")
-        
-    from Pipeline.Enjeux.utils import tqdm_joblib
-    from tqdm import tqdm
-    with tqdm_joblib(tqdm(desc='Processing text...',total=len(texte))) as progress_bar:   
-      Text=Parallel(n_jobs=cpu)(delayed(make_text)(t) for t in texte)
+
+    if time_:
+        s2=time()   
+        print("checks :",round((s2-s1)/60,2),"minutes") 
+
+    Text=Parallel(n_jobs=cpu)(delayed(make_text)(t) for t in texte)
     
     text=[Text[i][0] for i in range(len(Text))]
     empty=[Text[i][1] for i in range(len(Text))]
     
     dico=Make_Extractive(cpu).make_encoding(text,voc_size=vs,split=sp,tokenizer=tok,training=tr)
-    
+
+    if time_:
+        s3=time()
+        print("nettoyage :",round((s3-s2)/60,2),"minutes") 
+
     if choose_model=='SMHA':
         model=SMHA_Linear_classifier(torch.Size([512,768]),8,768)
         model.load_state_dict(torch.load('SMHA_Linear_classifier.pt',map_location=torch.device('cpu')))
@@ -1479,16 +1537,38 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
         model.load_state_dict(torch.load('Multi_Linear_Classifier.pt',map_location=torch.device('cpu')))
         model.eval()    
     
-    y=model(camem(torch.Tensor(dico['input']).long(),torch.Tensor(dico['mask']).long()).last_hidden_state)
+    if time_:
+        s4=time()
+        print("sélection modèle :",round((s4-s3)/60,2),"minutes") 
+    
+    try:
+        y=model(camem(torch.Tensor(dico['input']).long(),torch.Tensor(dico['mask']).long()).last_hidden_state.detach())
+    except:
+        y=[]
+        l=len(dico['input'])
+        for i in range(x):
+            y.append(
+                model(
+                    camem(torch.Tensor(dico['input']).long()[int((i/2)*l):int(((i+1)/2)*l)],
+                          torch.Tensor(dico['mask']).long()[int((i/2)*l):int(((i+1)/2)*l)]).last_hidden_state.detach()))
+        y=torch.cat(y)
+    
+    if time_:
+        s5=time()
+        print("Camembert :",round((s5-s4)/60,2),"minutes")
+    
+    del model
+    gc.collect() 
+    
     t=torch.mul(dico['mask_cls'],y).topk(3)
-    vec=[(dico['mask_cls'][i]==torch.tensor(1)).nonzero() for i in tqdm(range(len(dico['mask_cls'])),desc='mask_cls')]
+    vec=[(dico['mask_cls'][i]==torch.tensor(1)).nonzero() for i in range(len(dico['mask_cls']))]
     values=t[0]
     indice=t[1]
     Ve=[]
     Va=[]
     I=[]
     ind=0
-    for i in tqdm(range(len(dico['trace'])),desc='trace'):
+    for i in range(len(dico['trace'])):
         Ve.append(vec[ind:ind+dico['trace'][i]])
         Va.append(values[ind:ind+dico['trace'][i]])
         I.append(indice[ind:ind+dico['trace'][i]])
@@ -1507,6 +1587,10 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
     
     a=[[i for i in range(len(texte[k]))] for k in range(len(texte))]
     
+    if time_:
+        s6=time()
+        print("Récupération index :",round((s6-s5)/60,2),"minutes") 
+    
     for i in range(len(texte)):
         for k in empty[i]:
             a[i].remove(k)
@@ -1518,7 +1602,7 @@ def make_DL_resume(texte,cpu,choose_model,k=3,camem=None,vs=12000,sp=1,tok='MLSU
         return resu
 
 
-def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False):
+def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_only=False,seuil=70,weights=True,alpha=0.2,frac=0.25):
     '''
     Fonction permettant de produire des résumés sans deep learning.
     @sequence : liste de phrases.
@@ -1536,7 +1620,10 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
                            type='bert',
                            modele=modele,
                            k=k,
-                           get_score_only=get_score_only)
+                           get_score_only=get_score_only,
+                           s=seuil,
+                           weights=weights,
+                           alpha=alpha,frac=frac)
         except:
             print("Êtes-vous certain d'avoir mis le chemin du tokenizer en ayant spécifié que vous vouliez un embedding BERT ?\n Êtes-vous certain d'avoir spécifié un tokenizer correct ?")
     
@@ -1546,7 +1633,10 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
                         type='word2vec',
                         modele=modele,
                         k=k,
-                        get_score_only=get_score_only)
+                        get_score_only=get_score_only,
+                        s=seuil,
+                        weights=weights,
+                        alpha=alpha,frac=frac)
     
     elif type_=='BertScore':
         if modele!=None:
@@ -1572,7 +1662,7 @@ def make_U_resume(sequence,type_,k,cpu=2,modele=None,tok_path=None,get_score_onl
     res=fnct(sequence)
     return res
 
-def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,s=True,t=True,seuil=2,lem=False,sc=3): #,camem=None
+def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,sp=1,tok='MLSUM_tokenizer.model',tr=False,get_score_only=False,s=True,t=True,seuil=2,lem=False,sc=3,weights=True,alpha=0.2,frac=0.25): #,camem=None
     '''
     Fonction produisant le résumé. 
     @texte : liste de listes de phrases. Autrement dit, vous avez une liste de paragraphes, vous les tronquez à chaque point, et vous obtenez une liste de liste de phrases.
@@ -1603,6 +1693,7 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,
     
     
     else:
+        start_time=time()
         mk=partial(make_text,j=cpu,s=s,t=t,seuil=seuil,lem=lem,sc=sc)
         Text=Parallel(n_jobs=cpu)(delayed(mk)(t) for t in texte)
     
@@ -1615,13 +1706,107 @@ def Resume(texte,DL,cpu=2,type_=None,modele=None,choose_model=None,k=3,vs=12000,
                 seuil_carac=sc)
         text=WC.remove_empty(text)
         empty=[Text[i][1] for i in range(len(Text))]
-
-        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,get_score_only=get_score_only)
+        end_time=time()
+        print("Le processing du text a pris :",round((end_time-start_time)/60,2),"minutes")
+        mur=partial(make_U_resume,type_=type_,k=k,cpu=cpu,modele=modele,tok_path=tok,
+                            get_score_only=get_score_only,
+                            weights=weights,alpha=alpha,frac=frac)
         
         if get_score_only:
             res=[mur(t) for t in text]
+            end_2=time()
+            print("La production des résumés a pris :",round((end_2-end_time)/60,2),"minutes")
             return res,text
         
         else:
             res=[mur(text[i]) for i in range(len(text))]
+            end_2=time()
+            print("La production des résumés a pris :",round((end_2-end_time)/60,2),"minutes")
             return res,text
+
+def make_new_paragraphes(tcp,trace):
+   paragraphe=[]
+   paragraphe.append(tcp[:trace[-1][0]])
+   if len(trace[-1])>1:
+      for i in range(1,len(trace[-1])):
+         paragraphe.append(tcp[trace[-1][i-1]:(np.sum(trace[-1][:i])+trace[-1][i])])
+   return paragraphe
+
+def make_new_sortie(sortie,index=None,k=2):
+    '''
+    Fonction pour transformer les sorties de dimension x en dimension k.
+    '''
+    ouais=torch.zeros(sortie.size())
+    if index==None:
+        if len(sortie)>=2:
+            ouais[sortie.topk(k)[1]]=1
+        else:
+            ouais[sortie.topk(1)[1]]=1
+    else:
+        ouais[index[:k]]=1
+    return ouais
+
+
+def comparaison(simple3,score_vrai):
+    assert len(simple3)==len(score_vrai)
+        
+    F1=F1_score()
+    # tp=[]
+    # fp=[]
+    # fn=[]
+    # p=[]
+    # r=[]
+    # f=[]
+    
+    # for i in tqdm(range(len(simple3))):
+        # tp.append(F1.true_positive_mean(simple3[i],score_vrai[i]))
+        # fp.append(F1.false_positive_mean(simple3[i],score_vrai[i]))
+        # fn.append(F1.false_negative_mean(simple3[i],score_vrai[i]))
+        # p.append(F1.precision(simple3[i],score_vrai[i]))
+        # r.append(F1.recall(simple3[i],score_vrai[i]))
+        # f.append(F1(simple3[i],score_vrai[i]))
+    tp=F1.true_positive_mean(simple3,score_vrai)
+    fp=F1.false_positive_mean(simple3,score_vrai)
+    fn=F1.false_negative_mean(simple3,score_vrai)
+    p=F1.precision(simple3,score_vrai)
+    r=F1.recall(simple3,score_vrai)
+    f=F1(simple3,score_vrai)
+        
+    # mtp=torch.mean(torch.tensor(tp))
+    # mfp=torch.mean(torch.tensor(fp))
+    # mfn=torch.mean(torch.tensor(fn))
+    # mp=torch.mean(torch.tensor(p))
+    # mr=torch.mean(torch.tensor(r))
+    # mf=torch.mean(torch.tensor(f))
+    # resultat=[mtp,mfp,mfn,mp,mr,mf]
+    
+    return [tp,fp,fn,p,r,f]
+
+def make_compa(n,s):
+    sortie_multi=pickle.load(open(n,'rb'))
+
+    if type(sortie_multi[0])!=torch.Tensor:
+        sortie_multi=[torch.tensor(i).to(torch.long) for i in sortie_multi]
+
+    S=[]
+    erreur=[]
+    if len(sortie_multi)==len(s):
+        for i in range(len(s)):
+            try:
+                S.append(make_new_sortie(s[i],sortie_multi[i]))
+            except:
+                print("Unexpected error:", sys.exc_info())
+                break
+                print(i)
+                erreur.append(i)
+
+        try:
+            if erreur[0]==201:
+                s_prime=s[:201]+s[202:]
+                Sta=comparaison(torch.cat(S),torch.cat(s_prime))
+                return Sta
+        except:
+            Sta=comparaison(torch.cat(S),torch.cat(s))
+            return Sta
+    else:
+        print(n)
