@@ -2,9 +2,13 @@
 
 Bienvenue dans le référentiel consacré au projet de l'Ecolab sur le Traitement du Langage Naturel (français).
 
+
+## **Projet *Synthèse Augmentée***
+
+
 Vous pourrez trouver ici les codes finis et les codes exploratoires produits par l'équipe en charge du projet. Tout le projet est écrit en Python (ou Jupyter).
 
-## Objectif : produire des outils, via du Machine Learning et du Natural Language Processing, pour aider les auditeurs qui élaborent les avis sur les études d'impact environnemental.
+### Objectif : produire des outils, via du Machine Learning et du Natural Language Processing, pour aider les auditeurs qui élaborent les avis sur les études d'impact environnemental.
 
 Les auditeurs de la DREAL, Bretagne en l'occurrence, doivent analyser et rendre un avis environnemental sur des études d'impacts. Ces études sont parfois très longues (en moyenne 300 pages, avec un écart-type de 400, certaines études font plus de 1000 pages) et contiennent de nombreuses annexes (plans, photos etc...).  
 L'objectif de ce projet est de produire un outil, la __synthèse augmentée__, permettant d'avoir accès à un document court présentant les informations importantes de chaque paragraphe d'un document long et dense en information. Cette synthèse permet donc de jeter un coup d'oeil transversal rapide sur l'ensemble de l'étude, mais aussi d'y revenir lors du temps de l'analyse, de pouvoir comparer plus aisément au sein du même document mais aussi entre documents.  
@@ -12,7 +16,7 @@ L'objectif de ce projet est de produire un outil, la __synthèse augmentée__, p
 Ce document synthétique se présente sous la forme d'un sommaire, où pour chaque titre est associé trois éléments : les enjeux importants, un résumé ainsi que des mots clés. Ce sommaire sera à terme navigable.
 
 L'ensemble des travaux développés sont ré-utilisables et applicables à tout type de document, modulo un ré-entraînement potentiel pour une meilleure adéquation avec le corpus considéré. C'est d'ailleurs dans cet esprit que nous avons travaillé sur ce projet : permettre une bonne généralisation.
-# Table des matières
+## Table des matières
 
 Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bretagne, qui suivent un processus en plusieurs étapes :
 
@@ -23,7 +27,7 @@ Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bre
 
 Enfin, une autre fonctionnalité développée est :
 
-5. [un système de recommandation d'avis (fondé sur du **Deep Learning** et du **Collaborative Filtering** notamment )](#recommandation)
+5. [Un moteur de recherche augmenté par l'IA (fondé sur du **Deep Learning** et **Elastic Search** notamment )](#recommandation)
 
 De manière visuelle, le pipeline du projet de __synthèse augmentée__ se présente comme suit :
 
@@ -40,14 +44,14 @@ Ces codes exploratoires sont parfois flous pour des personnes extérieures au pr
 Pour setup le projet, il faut exécuter le script setup.py depuis la racine du projet (2021-NLP_AE) qui va aussi chercher les dernières données (environ 10Go) sur le disque partagé du SRI (le renommer en K si ce n'est pas le cas pour votre ordinateur). Attention : pour le moment le setup va juste identifier les noms de fichier sans comparer le contenu : il faut supprimer les fichier puis relancer setup si on veux actualiser un fichier (amélioration a faire).
 
 <a name="sommaire"/></a>
-## 1 - Détection et extraction du sommaire
+### 1 - Détection et extraction du sommaire
 Afin de réaliser la __synthèse augmentée__, nous avions besoin d'avoir accès au sommaire. C'est grâce à l'extraction du sommaire que nous allions pouvoir découper les documents, puis pouvoir travailler sur les différentes sections en les analysant. Pour cela, il fallait d'abord les détecter.
 Ce [dossier](./Pipeline/Extraction_sommaire) présente donc la démarche ainsi que les codes que nous avons utilisé pour détecter et extraire le sommaire des documents.
 Dans la mesure du possible, nous avons tenté de reprendre ces codes pour qu'ils soient adaptables à d'autres documents. Il convient cependant de comprendre que ces codes ne sont pas encore totalement généralisables, et que nous ne sommes pas responsables des particularités d'autres documents qui viendraient empêcher le code de fonctionner.
 
 
 <a name="enjeux"/></a>
-## 2 - Traitement et analyse des enjeux
+### 2 - Traitement et analyse des enjeux
 **Objectif** : identifier les enjeux présent dans un texte de longueur variable (idéalement le plus court possible)
 
 Vous trouverez l'ensemble des travaux opérationnels dans Pipeline/Enjeux
@@ -55,7 +59,7 @@ Quelques travaux exploratoires et exemples d'utilisation sur les avis et les sec
 Un README y est également présent pour expliquer les développements et explorations faites sur cette partie du projet.
 
 <a name="resume"/></a>
-## 3 - Résumé automatique de sections
+### 3 - Résumé automatique de sections
 **Objectif** : effectuer du résumé extractif (sélection des phrases pertinentes) sur les sections des études d'impacts.
 
 Vous trouverez l'ensemble des travaux opérationnels et exploratoires dans le dossier [Théo](./Theo).
@@ -69,13 +73,17 @@ Nous développons quatre approches différentes qui sont :
 Veuillez vous référer au dossier Théo pour y lire la note technique, ainsi qu'une explication plus précise et formelle dans le README disponible.
 
 <a name="motscles"/></a>
-## 4 - Extraction de mots-clés
+### 4 - Extraction de mots-clés
 
 **Objectifs** :
 * Extraire des mots-clés pertinents sur les sections des études d'impacts (et tout autres documents) en l'absence de données labellisées et de recul sur le meilleur modèle pour un cas d'usage donné.
 * Proposer un package directement actionnable pour toutes personnes/organisations voulant extraire des mots-clés sur un corpus de texte sans expertise prélable ni a priori sur les performances des nombreux modèles disponibles.
 
 Pour une présentation détaillée du modèle *keyBoost* qui en découle , se référer au dossier *Zakaria*. Une documentation complète est disponible dans le sous-répertoire *Docs* de *Zakaria*. Cette document retrace le contexte, l'architecture technique, la validation scientifique de la pertience de *keyBoost*, un demonstrateur web interactif ainsi qu'un tutoriel/documentation sur le package python *keyBoost*.
+
+
+
+## **Projet *Moteur de recherche augmenté Augmentée***
 
 <a name="recommandation"/></a>
 ## 4 - Système de recommandation d'avis
