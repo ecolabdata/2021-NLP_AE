@@ -25,9 +25,6 @@ Notre point de départ est donc l'ensemble des études d'impacts de la DREAL Bre
 3. [le résumé automatique de sections (via du **Deep Learning**, plus moins *supervisé*)](#resume).
 4. [l'extraction de mots-clés (via du **Deep Learning**,**Graphs** et approches **Statistiques** *non supervisées*)](#motscles)
 
-Enfin, une autre fonctionnalité développée est :
-
-5. [Un moteur de recherche augmenté par l'IA (fondé sur du **Deep Learning** et **Elastic Search** notamment )](#recommandation)
 
 De manière visuelle, le pipeline du projet de __synthèse augmentée__ se présente comme suit :
 
@@ -75,21 +72,22 @@ Veuillez vous référer au dossier Théo pour y lire la note technique, ainsi qu
 <a name="motscles"/></a>
 ### 4 - Extraction de mots-clés
 
+<p align = 'center'> <img src="keyboost.png"/> </p>
+
 **Objectifs** :
 * Extraire des mots-clés pertinents sur les sections des études d'impacts (et tout autres documents) en l'absence de données labellisées et de recul sur le meilleur modèle pour un cas d'usage donné.
 * Proposer un package directement actionnable pour toutes personnes/organisations voulant extraire des mots-clés sur un corpus de texte sans expertise prélable ni a priori sur les performances des nombreux modèles disponibles.
 
-Pour une présentation détaillée du modèle *keyBoost* qui en découle , se référer au dossier *Zakaria*. Une documentation complète est disponible dans le sous-répertoire *Docs* de *Zakaria*. Cette document retrace le contexte, l'architecture technique, la validation scientifique de la pertience de *keyBoost*, un demonstrateur web interactif ainsi qu'un tutoriel/documentation sur le package python *keyBoost*.
+Pour une présentation détaillée du modèle *keyBoost* qui en découle , se référer au dossier [Zakaria/keyboost_project](./Zakaria/keyboost_project). Une documentation complète est disponible dans le sous-répertoire [Zakaria/keyboost_project/Docs](./Zakaria/keyboost_project/Docs). Cette document retrace le contexte, l'architecture technique, la validation scientifique de la pertience de *keyBoost*, un demonstrateur web interactif ainsi qu'un tutoriel/documentation sur le package python *keyBoost*.
+
+## **Projet SearchBoost : *Moteur de recherche augmenté Augmentée***
+
+<p align = 'center'> <img src="searchboost.png"/> </p>
+
+SearchBoost est un moteur de recherche *augmenté* par l'IA qui permet aux auditeurs des Direction régionale de l'Environnement, de l'Aménagement et du Logement (DREAL) d'intéragir avec leur corpus de travail composé de plusieurs centaines d'études d'impact et d'avis historiques sur des projets ayant une conséquence sur l'écosysteme. Cette intéraction a été conçue, avec l'étroite collaboration des auditeurs de la DREAL Bretagne, pour être la plus en phase avec le process métier leur permettant ainsi de dégager du temps pour se concentrer sur l'apport de leur expertise dans la redaction des avis.
 
 
-
-## **Projet *Moteur de recherche augmenté Augmentée***
-
-<a name="recommandation"/></a>
-## 4 - Système de recommandation d'avis
-**Objectif** : formuler des recommandations d'avis correspondant à des études d'impacts similaires.
-
-
+Pour une présentation détaillée *SearchBoost* se référer au dossier [Zakaria/searchboost_project](./Zakaria/searchboost_project). Cette présentation retrace le contexte, l'architecture technique, et les modalités de deploiement et d'exécution du projet via *docker*.
 
 
 # **Contacts et citations :**
