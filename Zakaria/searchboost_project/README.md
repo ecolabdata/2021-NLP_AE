@@ -179,7 +179,7 @@ Désormais vous pouvez voir un ensemble de logs détaillant l'amorçage et la co
 3. Ce message signifie que SearchBoost est pret à l'emploi. Ouvrez votre navigateur web  à l'adresse `http://localhost:3000/` pour acceder à l'interface utilisateur ! 
 
 
-*NB: Vous pouvez trouver des exemples d'études d'impact vectorisées à analyser en allant, à partir de la racine du répertoire du projet dans le dossier `searchboost_source/AI/ExemplesEI`*
+*NB: Vous pouvez trouver des exemples d'études d'impact vectorisées à analyser en allant, à partir de la racine du répertoire du projet, dans le dossier `searchboost_source/AI/ExemplesEI`*
 
 ## Auteur
 
