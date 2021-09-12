@@ -5,7 +5,7 @@
 <p align = 'center'> <img src="readme_assets/searchboost_ui.png"/> </p>
 
 
-> :warning: **Le depot contenant le code du projet est trop volumineux (~18GB) pour être heberger sur GitHub**: Ce que vous voyez dans ce repository n'a que valeur d'illustration, ce n'est pas le depot original sur lequel vous trouverez les sources necessaires à l'éxécution et au developpement du projet.  **Veuillez télécharger le depot complet en suivant ce [lien](#note_technique)**
+> :warning: **Le depot contenant le code du projet est trop volumineux (~18GB) pour être hébergé sur GitHub**: Ce que vous voyez dans ce repository n'a que valeur d'illustration, ce n'est pas le depot original sur lequel vous trouverez les sources necessaires à l'éxécution et au developpement du projet.  **Veuillez télécharger le depot complet en suivant ce [lien](#note_technique)**
 
 
 SearchBoost est un moteur de recherche *augmenté* par l'IA qui permet aux auditeurs des Direction régionale de l'Environnement, de l'Aménagement et du Logement (DREAL) d'intéragir avec leur corpus de travail composé de plusieurs centaines d'études d'impact et d'avis historiques sur des projets ayant une conséquence sur l'écosysteme. Cette intéraction a été conçue, avec l'étroite collaboration des auditeurs de la DREAL Bretagne, pour être la plus en phase avec le process métier leur permettant ainsi de dégager du temps pour se concentrer sur l'apport de leur expertise dans la redaction des avis.
@@ -117,6 +117,9 @@ Pour pouvoir faire en sorte de faire fonctionner les différents conteneurs dock
 
 
 <a name="installation"/></a>
+
+
+> :warning: **Le depot contenant le code du projet est trop volumineux (~18GB) pour être hébergé sur GitHub**: Ce que vous voyez dans ce repository n'a que valeur d'illustration, ce n'est pas le depot original sur lequel vous trouverez les sources necessaires à l'éxécution et au developpement du projet.  **Veuillez télécharger le depot complet en suivant ce [lien](#note_technique)**
 
 ###  2.1. Installation
 
