@@ -2,7 +2,7 @@
 
 <h1 align = 'center'>SearchBoost : un moteur de recherche métier augmenté par l'IA</h1>
 
-<p align = 'center'> <img src="readme_assets/searchboost_ui.png"/> </p>
+<p align = 'center'> <img src="readme_assets/searchboost_ui.PNG"/> </p>
 
 
 > :warning: **Le depot contenant le code du projet est trop volumineux (~18GB) pour être hébergé sur GitHub**: Ce que vous voyez dans ce repository n'a que valeur d'illustration, ce n'est pas le depot original sur lequel vous trouverez les sources necessaires à l'éxécution et au developpement du projet.  **Veuillez télécharger le depot complet en suivant ce [lien](#note_technique)**
@@ -35,7 +35,7 @@ Une note technique sur les tenants et les aboutissants de chacun de ces deux asp
 
 
 
-<p align = 'center'> <img src="readme_assets/process_metier_simple.png"/> </p>
+<p align = 'center'> <img src="readme_assets/process_metier_simple.PNG"/> </p>
 
 
 Le schéma simplifié du process métier des auditeurs des auditeurs de la DREAL Bretagne ci-dessus met en évidence une caractéristique clé de leur métier : lors de l'analyse de l'étude d'impact d'un projet entrant dans le périmètre de compétences de l'autorité environnementale, les auditeurs fondent la rédaction de leur avis sur une travail de recherche documentaire venant appuyer leur expertise. 
@@ -43,7 +43,7 @@ Le schéma simplifié du process métier des auditeurs des auditeurs de la DREAL
 SearchBoost se veut comme étant un outil servant à structurer cette intéraction entre auditeur et corpus métier en lui permettant notamment de gérer la densité informationelle à laquelle il est confronté. En effet, les études d'impacts, présentes par centaines, sont des documents pouvant atteindre facilement les 500 pages de contenu spécialisé rendant tout travail de recherche documentaire long et fastidieux. Cette pénibilité est accrue par l'abscence d'infrastructure interne permmetant d'interroger de manière unifiée ce corpus réduisant l'intéraction avec ces documents à être partielle et fragmentée.
 
 
-<p align = 'center'> <img src="readme_assets/process_metier_complexe.png"/> </p>
+<p align = 'center'> <img src="readme_assets/process_metier_complexe.PNG"/> </p>
 
 
 Dépasser la representation simplificatrice pour définir précisement les modalités de travail des auditeurs avec leur corpus métier était la condition sine qua none à l'établisemment d'une solution technologique au plus proche des besoins. La déconstruction analytique de l'interaction auditeur-corpus indiquée par le schéma ci-dessus permet de mettre en évidence deux grands mouvements :
@@ -55,7 +55,7 @@ Dépasser la representation simplificatrice pour définir précisement les modal
 
 
 
-<p align = 'center'> <img src="readme_assets/process_searchboost.png"/> </p>
+<p align = 'center'> <img src="readme_assets/process_searchboost.PNG"/> </p>
 
 
 L'architecture technique de la solution SearchBoost reprend fidelement la structure de ce process métier en mettant les technologies de l'IA et de moteur de recherche en appui de ces deux grands mouvements: 
@@ -65,7 +65,7 @@ L'architecture technique de la solution SearchBoost reprend fidelement la struct
 * L'*analyse microscopique* se voit quant à elle propulsée par un moteur de recherche conçu sur la technologie *elastic* permettant, précisemment,  des croisements complexes pertinents en termes de correspondance et efficient en termes de temps de calculs.
 
 
-<p align = 'center'> <img src="readme_assets/searchboost_software_design.png"/> </p>
+<p align = 'center'> <img src="readme_assets/searchboost_software_design.PNG"/> </p>
 
 La conception logicielle du projet le décline en quatres serveurs fonctionnant en parallèlle pour délivrer l'experience utilisateur de SearchBoost :
 
