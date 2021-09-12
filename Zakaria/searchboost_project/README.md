@@ -19,7 +19,7 @@ SearchBoost se structure en deux blocs étroitement liés :
 Une note technique sur les tenants et les aboutissants de chacun de ces deux aspects de Search Boost (en terme de choix de conceptions et sur les propriétés mathématiques, statistiques et informatiques du projet) sera bientôt disponible [ici](#note_technique).
 
 <a name="toc"/></a>
-## Sommaire  
+## Table des matières  
 <!--ts-->
    1. [A propos du projet](#about)  
    2. [Bien commencer](#gettingstarted)    
