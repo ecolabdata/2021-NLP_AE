@@ -80,7 +80,7 @@ Veuillez vous référer au dossier Théo pour y lire la note technique, ainsi qu
 
 Pour une présentation détaillée du modèle *keyBoost* qui en découle , se référer au dossier [Zakaria/keyboost_project](./Zakaria/keyboost_project). Une documentation complète est disponible dans le sous-répertoire [Zakaria/keyboost_project/Docs](./Zakaria/keyboost_project/Docs). Cette document retrace le contexte, l'architecture technique, la validation scientifique de la pertience de *keyBoost*, un demonstrateur web interactif ainsi qu'un tutoriel/documentation sur le package python *keyBoost*.
 
-## **Projet SearchBoost : *Moteur de recherche augmenté Augmentée***
+## **Projet SearchBoost : *Moteur de recherche augmenté par l'IA***
 
 <p align = 'center'> <img src="searchboost.png"/> </p>
 
