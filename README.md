@@ -87,7 +87,7 @@ Pour une présentation détaillée du modèle *keyBoost* qui en découle , se r�
 SearchBoost est un moteur de recherche *augmenté* par l'IA qui permet aux auditeurs des Direction régionale de l'Environnement, de l'Aménagement et du Logement (DREAL) d'intéragir avec leur corpus de travail composé de plusieurs centaines d'études d'impact et d'avis historiques sur des projets ayant une conséquence sur l'écosysteme. Cette intéraction a été conçue, avec l'étroite collaboration des auditeurs de la DREAL Bretagne, pour être la plus en phase avec le process métier leur permettant ainsi de dégager du temps pour se concentrer sur l'apport de leur expertise dans la redaction des avis.
 
 
-Pour une présentation détaillée *SearchBoost* se référer au dossier [Zakaria/searchboost_project](./Zakaria/searchboost_project). Cette présentation retrace le contexte, l'architecture technique, et les modalités de deploiement et d'exécution du projet via *docker*.
+Pour une présentation détaillée de *SearchBoost* se référer au dossier [Zakaria/searchboost_project](./Zakaria/searchboost_project). Cette présentation retrace le contexte, l'architecture technique, et les modalités de deploiement et d'exécution du projet via *docker*.
 
 
 # **Contacts et citations :**
