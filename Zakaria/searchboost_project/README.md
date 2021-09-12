@@ -79,9 +79,9 @@ La conception logicielle du projet le décline en quatres serveurs fonctionnant 
 ## 2. Bien commencer
 [Back to ToC](#toc)
 
-Beaucoup d'efforts ont été mis dans la *dockerisation* des différentes composantes logicielle de ce travail. Ainsi, chacun des quatres serveurs décrit précedemment s'éxécute à l'interieur de conteneurs dockers fonctionnant les uns avec les autres. 
+Beaucoup d'efforts ont été mis dans la *dockerisation* des différentes composantes logicielle de ce travail. Ainsi, chacun des quatres serveurs décrit précedemment s'exécute à l'interieur de conteneurs dockers fonctionnant les uns avec les autres. 
 
-Ce travail a été effectué en vue de permettre le déploiement et l'éxécution simplifiée du projet dans n'importe quel environnement et en seulement quelques lignes de code.
+Ce travail a été effectué en vue de permettre le déploiement et l'exécution simplifiée du projet dans n'importe quel environnement et en seulement quelques lignes de code.
 
 
 <a name="requirements"/></a>
