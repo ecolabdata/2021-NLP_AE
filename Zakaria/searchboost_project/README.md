@@ -168,7 +168,7 @@ Après toutes ces étapes préparatoires, l'éxécution du projet est désormais
 ``` 
 Désormais vous pouvez voir un ensemble de logs détaillant l'amorçage et la configuration de SearchBoost
 
-*NB : Si c'est la première fois que vous lancer le projet au sein de votre environnement, cette commande déclenche le téléchargement, l'installation et la configuration adaptée au projet d'elasticsearch une fois pour toute !*
+*NB : Si c'est la première fois que vous lancer le projet au sein de votre environnement, cette commande déclenche le téléchargement, l'installation et la configuration adaptée au projet d'elasticsearch une fois pour toutes !*
 
 2. Attendez que les quatres conteneurs correspondant aux différents serveurs du projet s'initialisent à leur rythme et réussisent à communiquer ensemble. Au bout de quelques instants l'instance searchboost_appsearch devrait vous indiquez le message suivant : 
 
