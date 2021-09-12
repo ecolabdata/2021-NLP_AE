@@ -168,7 +168,7 @@ Après toutes ces étapes préparatoires, l'éxécution du projet est désormais
 ``` 
 Désormais vous pouvez voir un ensemble de logs détaillant l'amorçage et la configuration de SearchBoost
 
-*NB : Si c'est la première fois que vous lancer le projet au sein de votre environnement, cette commande déclenche le téléchargement, l'installation et la configuration adaptée au projet d'elasticsearch une fois pour toutes !*
+*NB: Si c'est la première fois que vous lancer le projet au sein de votre environnement, cette commande déclenche le téléchargement, l'installation et la configuration adaptée au projet d'elasticsearch une fois pour toutes !*
 
 2. Attendez que les quatres conteneurs correspondant aux différents serveurs du projet s'initialisent à leur rythme et réussisent à communiquer ensemble. Au bout de quelques instants l'instance searchboost_appsearch devrait vous indiquez le message suivant : 
 
@@ -179,6 +179,7 @@ Désormais vous pouvez voir un ensemble de logs détaillant l'amorçage et la co
 3. Ce message signifie que SearchBoost est pret à l'emploi. Ouvrez votre navigateur web  à l'adresse `http://localhost:3000/` pour acceder à l'interface utilisateur ! 
 
 
+*NB: Vous pouvez trouver des exemples d'études d'impact vectorisées à analyser en allant, à partir de la racine du répertoire du projet dans le dossier `searchboost_source/AI/ExemplesEI`*
 
 ## Auteur
 
